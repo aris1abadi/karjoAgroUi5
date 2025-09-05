@@ -207,6 +207,18 @@
 			kirimMsg(msgType.TASK, viewIndex, 'aktuator', '1');
 		}
 	}
+	
+	async function localLogin() {
+        try {
+            const response = await fetch(`http://${esp32Ip}/${endpoint}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Error communicating with ESP32:', error);
+            return null;
+        }
+    }
+
+
 </script>
 
 {#if $isLogin}
@@ -280,7 +292,8 @@
 						<Spinner class="me-3" bg="white" size="5" color="yellow" />
 					{/if}Login
 				</button>
-				<button color="blue" class="h-10 w-full rounded-lg border">Local </button>
+				<button color="blue" class="h-10 w-full rounded-lg border" onclick={() => localLogin()}>Local </button>
+			<button class="col-span-3 text-blue-800 text-right text-sm">Set kontrollerId</button>
 			</div>
 		</div>
 	</div>
