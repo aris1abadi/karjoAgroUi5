@@ -1,5 +1,5 @@
 <script lang="ts">
-	import client from '$lib/mqttClient';
+	
 	import { onMount } from 'svelte';
 	import {
 		isLogin,
@@ -26,10 +26,7 @@
 	let soilConfig = [false, false, false, false, false];
 	let distConfig = [false, false, false, false, false];
 
-	function kirim(cmd: string) {
-		client.publish('irigasi/control', cmd);
-		lastCommand.set(cmd);
-	}
+	
 
 	function simpanSetup() {}
 	function updateDisplayClick() {}

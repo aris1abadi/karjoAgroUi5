@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import mqttClient, { loginStart } from '$lib/mqttClient';
+	import { loginStart, kirimMsg } from '$lib/mqttClient';
 	import {
 		taskMode,
 		myTask,
@@ -14,12 +14,11 @@
 		loginWait,
 		isTaskEnable,
 		isMqttConnected,
-
-		taskChangeWait
-
+		taskChangeWait,
+		msgType
 	} from '$lib/stores';
-	import { unixToLocalString} from '$lib/utils';
-	import { Button, Checkbox, Modal, Label, Input,Spinner } from 'flowbite-svelte';
+	import { unixToLocalString } from '$lib/utils';
+	import { Button, Checkbox, Modal, Label, Input, Spinner } from 'flowbite-svelte';
 	import { ArrowRightOutline, ArrowLeftOutline } from 'flowbite-svelte-icons';
 	import RangeSlider from 'svelte-range-slider-pips';
 
@@ -41,13 +40,7 @@
 
 	let setupTitle = $state('setup ');
 	//let loginWait = false
-	onMount(() =>{
-		
-	})
-
-	function kirimMsg(cmd: string) {
-		mqttClient.publish('abadinet-in/KA-8CE9/0/0/getAllStatus', cmd);
-	}
+	onMount(() => {});
 
 	function gantiSatuan(idx) {
 		if ($myTask[idx].mode === $taskMode[0]) {
@@ -68,6 +61,13 @@
 		}
 		//console.log('dec view');
 		gantiSatuan(viewIndex);
+		//update enable status
+		if ($myTask[viewIndex].enable === 1) {
+			isTaskEnable.set(true);
+		} else {
+			isTaskEnable.set(false);
+		}
+		
 	}
 	function taskInc() {
 		if (++viewIndex > $myTask.length - 1) {
@@ -75,6 +75,11 @@
 		}
 		//console.log('inc view');
 		gantiSatuan(viewIndex);
+		if ($myTask[viewIndex].enable === 1) {
+			isTaskEnable.set(true);
+		} else {
+			isTaskEnable.set(false);
+		}
 	}
 	function rangeChange() {
 		dummyTask.batasBawah = rangeValue[0];
@@ -83,6 +88,7 @@
 	function simpanTask() {
 		dummyTask.nama = namaSelect;
 		console.log($state.snapshot(dummyTask));
+		kirimMsg(msgType.TASK, viewIndex, 'updateTask', JSON.stringify(dummyTask));
 		defaultModal = false;
 	}
 
@@ -163,7 +169,6 @@
 		}
 	}
 
-	
 	function loginClick() {
 		$loginWait = true;
 		setTimeout(() => loginTimeOut(), 10000);
@@ -175,24 +180,40 @@
 			alert('kontroller tidak meresponse\nCek koneksi atau kontrollerId');
 		}
 	}
-	function taskChange(){
-		$taskChangeWait = true
-		setTimeout(() =>taskChangeTimeout(),10000)
-		console.log('task change')
+	function taskChange() {
+		$taskChangeWait = true;
+		setTimeout(() => taskChangeTimeout(), 10000);
+		let enMsg = '0';
+		if ($isTaskEnable) {
+			enMsg = '1';
+		} else {
+			enMsg = '0';
+		}
+		kirimMsg(msgType.TASK, viewIndex, 'enable', enMsg);
+		console.log('task change');
 	}
 
-	function taskChangeTimeout(){
-		$taskChangeWait = false;
-		alert("Kontroller tidak menanggapi !!!")
+	function taskChangeTimeout() {
+		if ($taskChangeWait) {
+			$taskChangeWait = false;
+			alert('Kontroller tidak menanggapi !!!');
+		}
 	}
 
+	function aktuatorClick() {
+		if ($myTask[viewIndex].aktuator1Val === 1) {
+			kirimMsg(msgType.TASK, viewIndex, 'aktuator', '0');
+		} else {
+			kirimMsg(msgType.TASK, viewIndex, 'aktuator', '1');
+		}
+	}
 </script>
 
 {#if $isLogin}
 	{#if $myTask.length !== 0}
-		<div class="h-54 grid w-full justify-items-center rounded-lg bg-white p-0 shadow">
+		<div class="grid h-54 w-full justify-items-center rounded-lg bg-white p-0 shadow">
 			<button
-				class={$myTask[viewIndex].enable == 0
+				class={$myTask[viewIndex].enable === 0
 					? 'font-monospace mt-0 h-8 w-full  bg-red-500 text-center text-sm font-bold text-white '
 					: 'font-monospace mt-0 h-8 w-full  bg-green-500 text-center text-sm font-bold text-white '}
 				ondblclick={() => setupClick()}
@@ -207,14 +228,22 @@
 			<div class="grid h-16 w-3/4 grid-cols-4 border border-blue-300">
 				<div class="col-span-3"></div>
 				<div class="text-xs font-bold">Pompa</div>
-				<div class="col-span-3 ml-4"><Checkbox onchange={() =>taskChange()} bind:checked={$isTaskEnable}>
-					{#if $taskChangeWait
-					}<Spinner class="me-3" bg="white" size="5" color="yellow"/>
-					{/if}
+				<div class="col-span-3 ml-4">
+					<Checkbox onchange={() => taskChange()} bind:checked={$isTaskEnable}>
+						{#if $taskChangeWait}<Spinner class="me-3" bg="white" size="5" color="yellow" />
+						{/if}
 
-					auto</Checkbox></div>
+						auto</Checkbox
+					>
+				</div>
 
-				<button><img src="/off4.png" alt="Off" class="h-8 w-8" /></button>
+				<button class="flex justify-items-center" onclick={() =>aktuatorClick()}>
+					{#if $myTask[viewIndex].aktuator1Val === 1}
+						<img src="/on4.png" alt="On" class="h-8 w-8" />
+					{:else}
+						<img src="/off4.png" alt="Off" class="h-8 w-8" />
+						
+					{/if}</button>
 			</div>
 		</div>
 		<div class="mt-8 grid grid-cols-7 items-center gap-2">
@@ -237,7 +266,7 @@
 		</div>
 	{/if}
 {:else}
-	<div class="h-54 grid w-full justify-items-center rounded-lg bg-white p-0 shadow">
+	<div class="grid h-54 w-full justify-items-center rounded-lg bg-white p-0 shadow">
 		<div class="p-4">
 			<Label for="password">Password</Label>
 			<Input type="password" id="password" class="h-10" placeholder="•••••••••" required />

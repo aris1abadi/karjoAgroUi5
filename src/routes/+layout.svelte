@@ -2,7 +2,7 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { HomeOutline } from 'flowbite-svelte-icons';
-	import { isMqttConnected, isControllerConnected, isLogin } from '$lib/stores';
+	import { isMqttConnected, isControllerConnected, isLogin,kontrolID } from '$lib/stores';
 	import { BottomNav, BottomNavItem, Skeleton, ImagePlaceholder } from 'flowbite-svelte';
 	import {
 		HomeSolid,
@@ -22,7 +22,8 @@
 </svelte:head>
 
 <div class="mx-auto w-full max-w-md items-center">
-	<h1 class="mb-0 mt-4 text-center text-4xl font-bold">KarjoAgro</h1>
+	<div class="mb-0 mt-4 text-center text-2xl text-white font-mono  font-bold">Irigasi Otomatis</div>
+	<div class="text-center text-white text-xs">KarjoAgro {$kontrolID}</div>
 	<div class="grid-cols-15 mt-2 grid">
 		<div class="col-span-5"></div>
 		<MobilePhoneSolid class="h-5 w-5 shrink-0 text-center text-white" />
