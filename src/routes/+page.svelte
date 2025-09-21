@@ -18,11 +18,15 @@
 		msgType,
 		logMsg,
 		connectionType,
-		connectionMode
+		connectionMode,
+		settingModal,
+		kontrolID,
+		isBleConnected,
+		demoVal,demoWait
 
 	} from '$lib/stores';
 	import { unixToLocalString } from '$lib/utils';
-	import { Button, Checkbox, Modal, Label, Input, Spinner,Toast } from 'flowbite-svelte';
+	import { Button, Checkbox, Modal, Label, Input, Spinner,Toast ,Tabs, TabItem,  Toggle } from 'flowbite-svelte';
 	import { ArrowRightOutline, ArrowLeftOutline } from 'flowbite-svelte-icons';
 	import RangeSlider from 'svelte-range-slider-pips';
 	import { bleConnect,bleDisconnect } from '$lib/bleClient';
@@ -30,7 +34,7 @@
 	import { notifier } from '@beyonk/svelte-notifications'
 
 	let viewIndex = $state(0);
-	let defaultModal = $state(false);
+	let defaultModal = $state(false);	
 	let modeSelect = $state(0);
 	let namaSelect = $state('');
 	let aktuator1Select = $state(0);
@@ -44,6 +48,19 @@
 	let satuan = $state('Cm');
 	let dummyTask = $state([$myTask[0]]);
 	// isTaskEnable = $state(false)
+
+	let inputID = $state('');
+	let displaySelect = $state(0);
+	let displayModeSelect = $state(0);
+
+	let wifiSSID = $state('');
+	let wifiPASS = $state('');
+
+	const displatList = ['Mode BAR', 'Mode Angka'];
+	let tempConfig = [false, false, false, false, false];                     
+	let humConfig = [false, false, false, false, false];
+	let soilConfig = [false, false, false, false, false];
+	let distConfig = [false, false, false, false, false];
 
 	let setupTitle = $state('setup ');
 	//let loginWait = false
@@ -229,6 +246,20 @@
 		//bleConnect()
 		loginStart('demoPass',connectionType.BLE);
 	}
+
+	function simpanKontrolID() {
+		$kontrolID = inputID;
+		$settingModal = false
+		
+	}
+
+	function simpanSetup() {}
+	function updateDisplayClick() {}
+	function demoChange() {}
+
+	function setKontroIdClick(){
+		$settingModal = true
+	}
 	
 	
 
@@ -317,7 +348,7 @@
 					{/if}Login
 				</button>
 				<button color="blue" class="h-10 w-full rounded-lg border" onclick={() => localLogin()}>Local </button>
-			<button onclick={() => goto('/settings')} class="col-span-3 text-blue-800 text-right text-sm">Set kontrollerId</button>
+			<button onclick={() => setKontroIdClick()} class="col-span-3 text-blue-800 text-right text-sm">Set kontrollerId</button>
 			</div>
 		</div>
 	</div>
@@ -440,4 +471,216 @@
 		<Button color="red" onclick={() => (defaultModal = false)}>Keluar</Button>
 		<Button color="green" onclick={() => simpanTask()}>Simpan</Button>
 	</div>
+</Modal>
+
+<!--Setiing modal-->
+<Modal class="h-full w-full" title='Settings' bind:open={$settingModal}>
+
+	<Tabs tabStyle="underline">
+		{#if $isLogin}
+			<TabItem open title="Setup">
+				<div class="w-full overflow-auto">
+					<div class="mx-auto grid max-w-sm grid-cols-2 gap-4">
+						<!--for setupkontroller network-->
+						{#if $isBleConnected}
+							<div class="col-span-2 grid h-36 w-full grid-cols-2 gap-4 rounded border p-2">
+								<div>
+									<label for="ssid" class="mb-1 block text-xs dark:text-white">ssid</label>
+	
+									<input
+										id="ssid"
+										type="text"
+										bind:value={wifiSSID}
+										class=" h-8 w-full rounded border bg-gray-50 text-sm text-gray-900"
+										placeholder="wifi SSID"
+										required
+									/>
+								</div>
+								<div>
+									<label for="pass" class="mb-1 block text-xs dark:text-white">password</label>
+	
+									<input
+										id="pass"
+										type="password"
+										bind:value={wifiPASS}
+										class=" h-8 w-full rounded border bg-gray-50 text-sm text-gray-900"
+										placeholder="......"
+										required
+									/>
+								</div>
+								<Button class="col-span-2 h-8 w-full" color="green" onclick={() => simpanNetwork()}
+									>Simpan</Button
+								>
+							</div>
+						{/if}
+	
+						<div class="col-span-2 grid h-40 w-full grid-cols-2 gap-4 rounded border p-2">
+							<div>
+								<label for="disp1" class="mb-1 block text-xs dark:text-white">Display</label>
+								<select
+									bind:value={displaySelect}
+									id="disk1"
+									class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+								>
+									{#each $myTask as kontrol, idx}
+										<option value={idx}>{kontrol.nama}</option>
+									{/each}
+								</select>
+							</div>
+							<div>
+								<label for="disk2" class="mb-1 block text-xs">Mode</label>
+								<select
+									id="disk2"
+									bind:value={displayModeSelect}
+									class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+								>
+									{#each displatList as display, idx}
+										<option value={idx}>{display}</option>
+									{/each}
+								</select>
+							</div>
+							<Button onclick={() => updateDisplayClick()} class="col-span-2">Update Display</Button>
+						</div>
+						<div class="center col-span-2 h-12 w-full rounded border px-8 py-2">
+							<Toggle bind:checked={$demoVal} onchange={() => demoChange()}
+								>Demo
+								{#if $demoWait}
+									<Spinner class="me-3" bg="white" size="5" color="yellow" />
+								{/if}
+							</Toggle>
+						</div>
+					</div>
+				</div>
+			</TabItem>
+			<TabItem title="Aktuator">
+				<div class="max-h-80 w-full overflow-auto">
+					{#each $myAktuator as aktuator, idx}
+						<div class="mb-4 grid h-16 w-full grid-cols-3 rounded border p-2">
+							<button class="textsm col-span-2 ml-2 text-left font-bold"
+								>Aktuator{idx + 1}
+								<div class="text-xs font-normal">
+									NodeId: {aktuator.nodeId} Aktuator: {aktuator.nomerAktuator}
+								</div></button
+							>
+							<button class="text-sm font-bold"
+								>{#if aktuator.val === 1}
+									ON
+								{:else}
+									OFF
+								{/if}</button
+							>
+						</div>
+					{/each}
+				</div>
+			</TabItem>
+			<TabItem title="Sensor">
+				<div class="no-scrollbar max-h-90 w-full overflow-auto">
+					{#each $myTemperatureSensor as sensor, idx}
+						<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
+							<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
+								><div class="mt-2 ml-2 font-bold">SensorTemperature{idx + 1}</div>
+								<div class="ml-2 text-xs font-normal">
+									NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
+								</div></button
+							>
+							<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
+	
+							<div class="mt-2 ml-2 text-xs">Snr:{sensor.snr}</div>
+							<div class="mt-2 text-xs">Rssi:{sensor.rssi}</div>
+							<div class="mt-2 text-xs">val:{sensor.rawVal}</div>
+	
+							<div class="col-span-3 my-2 ml-2 text-xs">
+								lastSeen:{sensor.lastSeen}
+							</div>
+						</div>
+					{/each}
+					<hr class="mb-4" />
+					{#each $myHumiditySensor as sensor, idx}
+						<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
+							<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
+								><div class="mt-2 ml-2 font-bold">SensorHumidity{idx + 1}</div>
+								<div class="ml-2 text-xs font-normal">
+									NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
+								</div></button
+							>
+							<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
+	
+							<div class="mt-2 ml-2 text-xs font-normal">Snr:{sensor.snr}</div>
+							<div class="mt-2 text-xs font-normal">Rssi:{sensor.rssi}</div>
+							<div class="mt-2 text-xs font-normal">val:{sensor.rawVal}</div>
+	
+							<div class="col-span-3 my-2 ml-2 text-xs font-normal">
+								lastSeen:{sensor.lastSeen}
+							</div>
+						</div>
+					{/each}
+					<hr class="mb-4" />
+					{#each $mySoilSensor as sensor, idx}
+						<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
+							<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
+								><div class="mt-2 ml-2 font-bold">SensorLengas{idx + 1}</div>
+								<div class="ml-2 text-xs font-normal">
+									NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
+								</div></button
+							>
+							<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
+	
+							<div class="ml-2 text-xs font-normal">Snr:{sensor.snr}</div>
+							<div class="text-xs font-normal">Rssi:{sensor.rssi}</div>
+							<div class=" text-xs font-normal">val:{sensor.rawVal}</div>
+	
+							<div class="ml-2 text-xs font-normal">minVal:{sensor.minValue}</div>
+							<div class="text-xs font-normal">maxVal:{sensor.maxValue}</div>
+							<div></div>
+	
+							<div class="col-span-3 ml-2 text-xs font-normal">
+								lastSeen:{sensor.lastSeen}
+							</div>
+						</div>
+					{/each}
+					<hr class="mb-4" />
+					{#each $myDistanceSensor as sensor, idx}
+						<div class="mb-4 grid h-34 w-full grid-cols-3 content-start rounded border">
+							<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
+								><div class="mt-2 ml-2 font-bold">SensorIntermittent{idx + 1}</div>
+								<div class="ml-2 text-xs font-normal">
+									NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
+								</div></button
+							>
+							<button class="bg-gray-200 text-center font-bold">{sensor.val} cm</button>
+	
+							<div class="ml-2 text-xs font-normal">Snr:{sensor.snr}</div>
+							<div class="text-xs font-normal">Rssi:{sensor.rssi}</div>
+							<div class=" text-xs font-normal">val:{sensor.rawVal}</div>
+	
+							<div class="ml-2 text-xs font-normal">minVal:{sensor.minValue}</div>
+							<div class="text-xs font-normal">maxVal:{sensor.maxValue}</div>
+							<div></div>
+	
+							<div class="col-span-3 ml-2 text-xs font-normal">
+								lastSeen:{sensor.lastSeen}
+							</div>
+						</div>
+					{/each}
+					<hr class="mb-4" />
+				</div>
+			</TabItem>
+		{:else}
+			<TabItem open title="Setup">
+				<div class="w-full overflow-auto">
+					<div class="mx-auto grid max-w-sm grid-cols-2 gap-4">
+						<input
+							type="text"
+							bind:value={inputID}
+							class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+							placeholder={$kontrolID}
+							required
+						/>
+						<Button color="green" onclick={() => simpanKontrolID()}>Simpan</Button>
+						<div class="col-span-2"></div>
+					</div>
+				</div>
+			</TabItem>
+		{/if}
+	</Tabs>
 </Modal>

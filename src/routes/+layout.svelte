@@ -3,7 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { get } from 'svelte/store';
 	import { HomeOutline } from 'flowbite-svelte-icons';
-	import { isMqttConnected, isControllerConnected, isLogin,kontrolID ,isBleConnected, connectionMode, connectionType} from '$lib/stores';
+	import { isMqttConnected, isControllerConnected, isLogin,kontrolID ,isBleConnected, connectionMode, connectionType,settingModal} from '$lib/stores';
 	import { BottomNav, BottomNavItem, Skeleton, ImagePlaceholder } from 'flowbite-svelte';
 	import {
 		HomeSolid,
@@ -36,6 +36,10 @@
 			$connectionMode = connectionType.NONE;
 		}
 		
+	}
+
+	function settingClick(){
+		$settingModal = true
 	}
 </script>
 
@@ -76,7 +80,7 @@
 			<BottomNavItem btnName="Home" href="/">
 				<HomeSolid />
 			</BottomNavItem>
-			<BottomNavItem btnName="Setup" href="/settings">
+			<BottomNavItem btnName="Setup" onclick={settingClick}>
 				<AdjustmentsVerticalOutline />
 			</BottomNavItem>
 			<BottomNavItem btnName="Keluar" onclick={logoutClick}>
