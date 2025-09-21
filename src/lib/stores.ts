@@ -3,6 +3,7 @@ import  { persisted }  from "svelte-persisted-store";
 import { writev } from "mqtt/lib/BufferedDuplex";
 
 export const isMqttConnected = writable(false);
+export const isBleConnected = writable(false);
 export const isControllerConnected = writable(false)
 
 export const sensorData = writable<{ time: string; moisture: number }[]>([]);
@@ -25,11 +26,22 @@ export const isTaskEnable  = writable(false)
 export const taskChangeWait = writable(false)
 
 export const kontrolID = persisted('kontrolID', 'KA-8CE9')
+export const bleDeviceId = persisted('bleDeviceId','')
 export const subMqtt = readable("abadinet-out/" + get(kontrolID) + "/#");
 export const pubMqtt = readable("abadinet-in/" + get(kontrolID) + "/");
-export const msgType = {
+export const msgType ={
     KONTROL: 0,
     TASK: 1,
     AKTUATOR: 2,
     SENSOR: 3,
   };
+  export const connectionType = {
+    NONE:0,
+    BLE: 1,
+    MQTT: 2,
+  };
+  export const connectionMode = writable(connectionType.NONE)
+
+  export const localUrl = "http://102.18.4.1"
+
+  export const logMsg = writable("Tes ")

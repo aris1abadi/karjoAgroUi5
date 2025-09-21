@@ -50,5 +50,9 @@ export default defineConfig({
 				}
 			}
 		]
-	}
+	},
+	server: {
+		host: true, // Allow external access (e.g., from ngrok)
+		allowedHosts: ['.ngrok-free.app'], // Allow all ngrok subdomains
+	},
 });

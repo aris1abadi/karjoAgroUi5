@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { loginStart, kirimMsg } from '$lib/mqttClient';
+	import { loginStart, kirimMsg,mqttDisconnect } from '$lib/mqttClient';
 	import {
 		taskMode,
 		myTask,
-		myAktuator,
+		myAktuator, 
 		taskModeTxt,
 		myTemperatureSensor,
 		myHumiditySensor,
@@ -15,12 +15,19 @@
 		isTaskEnable,
 		isMqttConnected,
 		taskChangeWait,
-		msgType
+		msgType,
+		logMsg,
+		connectionType,
+		connectionMode
+
 	} from '$lib/stores';
 	import { unixToLocalString } from '$lib/utils';
-	import { Button, Checkbox, Modal, Label, Input, Spinner } from 'flowbite-svelte';
+	import { Button, Checkbox, Modal, Label, Input, Spinner,Toast } from 'flowbite-svelte';
 	import { ArrowRightOutline, ArrowLeftOutline } from 'flowbite-svelte-icons';
 	import RangeSlider from 'svelte-range-slider-pips';
+	import { bleConnect,bleDisconnect } from '$lib/bleClient';
+	import { goto } from '$app/navigation';
+	import { notifier } from '@beyonk/svelte-notifications'
 
 	let viewIndex = $state(0);
 	let defaultModal = $state(false);
@@ -172,12 +179,21 @@
 	function loginClick() {
 		$loginWait = true;
 		setTimeout(() => loginTimeOut(), 10000);
-		loginStart();
+		loginStart('demoPass',connectionType.MQTT);
 	}
 	function loginTimeOut() {
 		if ($loginWait) {
 			$loginWait = false;
-			alert('kontroller tidak meresponse\nCek koneksi atau kontrollerId');
+			//alert('kontroller tidak meresponse\nCek koneksi atau kontrollerId');
+			notifier.warning('kontroller tidak meresponse\nCek koneksi atau kontrollerId')
+			if($connectionMode === connectionType.MQTT){
+			mqttDisconnect();
+			$connectionMode = connectionType.NONE
+		}
+		else if($connectionMode === connectionType.BLE){
+			bleDisconnect();
+			$connectionMode = connectionType.NONE
+		}
 		}
 	}
 	function taskChange() {
@@ -196,7 +212,8 @@
 	function taskChangeTimeout() {
 		if ($taskChangeWait) {
 			$taskChangeWait = false;
-			alert('Kontroller tidak menanggapi !!!');
+			//alert('Kontroller tidak menanggapi !!!');
+			notifier.warning('Kontroller tidak Terhubung !!!')
 		}
 	}
 
@@ -207,16 +224,13 @@
 			kirimMsg(msgType.TASK, viewIndex, 'aktuator', '1');
 		}
 	}
+
+	function localLogin(){
+		//bleConnect()
+		loginStart('demoPass',connectionType.BLE);
+	}
 	
-	async function localLogin() {
-        try {
-            const response = await fetch(`http://${esp32Ip}/${endpoint}`);
-            return await response.json();
-        } catch (error) {
-            console.error('Error communicating with ESP32:', error);
-            return null;
-        }
-    }
+	
 
 
 </script>
@@ -235,17 +249,27 @@
 			<div class="mb-0 text-4xl font-bold">
 				{$myTask[viewIndex].sensorVal} <span class="text-xl">{satuan}</span>
 			</div>
-			<div class="mt-0 text-xs">lastSeen {unixToLocalString($myTask[viewIndex].lastSeen)}</div>
+			<div class="mt-0 text-xs">lastSeen 
+				{#if $myTask[viewIndex].lastSeen === 0}
+				---
+				{:else}
+				{unixToLocalString($myTask[viewIndex].lastSeen)}
+				{/if}
+				
+				</div>
 
-			<div class="grid h-16 w-3/4 grid-cols-4 border border-blue-300">
+			<div class="grid h-16 w-5/6 grid-cols-4 border border-blue-300">
 				<div class="col-span-3"></div>
 				<div class="text-xs font-bold">Pompa</div>
-				<div class="col-span-3 ml-4">
+				<div class="col-span-3 ml-4 text-xs">
 					<Checkbox onchange={() => taskChange()} bind:checked={$isTaskEnable}>
 						{#if $taskChangeWait}<Spinner class="me-3" bg="white" size="5" color="yellow" />
 						{/if}
-
-						auto</Checkbox
+						<span class="text-xs font-bold font-mono">
+						Auto
+						ON {$myTask[viewIndex].batasBawah} & OFF {$myTask[viewIndex].batasAtas}
+						</span>
+						</Checkbox
 					>
 				</div>
 
@@ -269,7 +293,7 @@
 				onclick={() => {
 					viewIndex = 0;
 				}}
-				class="h-4 w-4">{viewIndex}</Button
+				class="h-4 w-4">{viewIndex + 1}</Button
 			>
 			<Button pill={true} class="p-2!" onclick={() => taskInc()}
 				><ArrowRightOutline class="h-4 w-4" /></Button
@@ -293,11 +317,16 @@
 					{/if}Login
 				</button>
 				<button color="blue" class="h-10 w-full rounded-lg border" onclick={() => localLogin()}>Local </button>
-			<button class="col-span-3 text-blue-800 text-right text-sm">Set kontrollerId</button>
+			<button onclick={() => goto('/settings')} class="col-span-3 text-blue-800 text-right text-sm">Set kontrollerId</button>
 			</div>
 		</div>
 	</div>
 {/if}
+
+<!--
+<div>{$logMsg}</div>
+
+-->
 
 <Modal class="h-full w-full" title={setupTitle} bind:open={defaultModal}>
 	<div class="mx-auto grid max-w-sm grid-cols-2 gap-2">

@@ -49,6 +49,7 @@
 		"vitest-browser-svelte": "^0.1.0"
 	},
 	"dependencies": {
+		"@beyonk/svelte-notifications": "^4.3.0",
 		"mqtt": "^5.14.0",
 		"svelte-persisted-store": "^0.12.0"
 	}

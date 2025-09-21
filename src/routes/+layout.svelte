@@ -1,8 +1,9 @@
 <script lang="ts">
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { get } from 'svelte/store';
 	import { HomeOutline } from 'flowbite-svelte-icons';
-	import { isMqttConnected, isControllerConnected, isLogin,kontrolID } from '$lib/stores';
+	import { isMqttConnected, isControllerConnected, isLogin,kontrolID ,isBleConnected, connectionMode, connectionType} from '$lib/stores';
 	import { BottomNav, BottomNavItem, Skeleton, ImagePlaceholder } from 'flowbite-svelte';
 	import {
 		HomeSolid,
@@ -13,28 +14,53 @@
 		UploadSolid,
 		ArrowsRepeatOutline
 	} from 'flowbite-svelte-icons';
+	import { mqttDisconnect } from '$lib/mqttClient';
+	import { bleDisconnect } from '$lib/bleClient';
+	import { goto } from '$app/navigation';
+	import { NotificationDisplay, notifier } from '@beyonk/svelte-notifications'
 
 	let { children } = $props();
+
+	function logoutClick(){
+		isLogin.set(false);
+		goto('/')
+		notifier.info('logout')
+		
+		
+		if(get(connectionMode) === connectionType.MQTT){
+			mqttDisconnect();
+			$connectionMode = connectionType.NONE;
+		}
+		else if(get(connectionMode) === connectionType.BLE){
+			bleDisconnect();
+			$connectionMode = connectionType.NONE;
+		}
+		
+	}
 </script>
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
 </svelte:head>
+<NotificationDisplay />
 
 <div class="mx-auto w-full max-w-md items-center">
 	<div class="mb-0 mt-4 text-center text-2xl text-white font-mono  font-bold">Irigasi Otomatis</div>
 	<div class="text-center text-white text-xs">KarjoAgro {$kontrolID}</div>
-	<div class="grid-cols-15 mt-2 grid">
-		<div class="col-span-5"></div>
+	<div class="grid grid-cols-3 gap-4">
+		<div></div>
+	<div class="w-full text-center text-white flex items-center gap-2">
+		
 		<MobilePhoneSolid class="h-5 w-5 shrink-0 text-center text-white" />
 		{#if $isMqttConnected}
 			<ArrowsRepeatOutline class="h-4 w-4 shrink-0 text-center" />
-			<CloudArrowUpSolid class="h-5 w-5 shrink-0 text-white" />
-			{#if $isControllerConnected}
-				<ArrowsRepeatOutline class="h-4 w-4 shrink-0" />
-				<UploadSolid class="h-5 w-5 shrink-0 text-white" />
-			{/if}
+			<CloudArrowUpSolid class="h-5 w-5 shrink-0 text-white" />		
 		{/if}
+		{#if $isControllerConnected}
+		<ArrowsRepeatOutline class="h-4 w-4 shrink-0" />
+		<UploadSolid class="h-5 w-5 shrink-0 text-white" />
+	{/if}
+	</div>
 	</div>
 
 	<main class="flex-1 p-4">
@@ -53,7 +79,7 @@
 			<BottomNavItem btnName="Setup" href="/settings">
 				<AdjustmentsVerticalOutline />
 			</BottomNavItem>
-			<BottomNavItem btnName="Keluar" href="/login">
+			<BottomNavItem btnName="Keluar" onclick={logoutClick}>
 				<ForwardSolid />
 			</BottomNavItem>
 		</BottomNav>
