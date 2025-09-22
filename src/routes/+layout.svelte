@@ -3,7 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { get } from 'svelte/store';
 	import { HomeOutline } from 'flowbite-svelte-icons';
-	import { isMqttConnected, isControllerConnected, isLogin,kontrolID ,isBleConnected, connectionMode, connectionType,settingModal} from '$lib/stores';
+	import { isMqttConnected, isControllerConnected, isLogin,kontrolID ,settingTitle, connectionMode, connectionType,settingModal} from '$lib/stores';
 	import { BottomNav, BottomNavItem, Skeleton, ImagePlaceholder } from 'flowbite-svelte';
 	import {
 		HomeSolid,
@@ -22,11 +22,9 @@
 	let { children } = $props();
 
 	function logoutClick(){
-		isLogin.set(false);
-		goto('/')
+		
 		notifier.info('logout')
-		
-		
+
 		if(get(connectionMode) === connectionType.MQTT){
 			mqttDisconnect();
 			$connectionMode = connectionType.NONE;
@@ -35,11 +33,21 @@
 			bleDisconnect();
 			$connectionMode = connectionType.NONE;
 		}
+		setTimeout(() => goHome(),10000);
 		
+		
+		
+		
+	}
+
+	function goHome(){
+		goto('/');
+		$isLogin = false
 	}
 
 	function settingClick(){
 		$settingModal = true
+		$settingTitle = 'Settings'
 	}
 </script>
 

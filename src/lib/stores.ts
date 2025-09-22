@@ -25,6 +25,7 @@ export const demoWait = writable(false)
 export const isTaskEnable  = writable(false)
 export const taskChangeWait = writable(false)
 export const settingModal = writable(false);
+export const settingTitle = writable('Settings')
 
 export const kontrolID = persisted('kontrolID', 'KA-8CE9')
 export const bleDeviceId = persisted('bleDeviceId','')

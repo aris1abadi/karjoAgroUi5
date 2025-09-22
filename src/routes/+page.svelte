@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { loginStart, kirimMsg,mqttDisconnect } from '$lib/mqttClient';
+	import { loginStart, kirimMsg, mqttDisconnect } from '$lib/mqttClient';
 	import {
 		taskMode,
 		myTask,
-		myAktuator, 
+		myAktuator,
 		taskModeTxt,
 		myTemperatureSensor,
 		myHumiditySensor,
@@ -22,19 +22,31 @@
 		settingModal,
 		kontrolID,
 		isBleConnected,
-		demoVal,demoWait
-
+		demoVal,
+		demoWait,
+		settingTitle
 	} from '$lib/stores';
 	import { unixToLocalString } from '$lib/utils';
-	import { Button, Checkbox, Modal, Label, Input, Spinner,Toast ,Tabs, TabItem,  Toggle } from 'flowbite-svelte';
+	import {
+		Button,
+		Checkbox,
+		Modal,
+		Label,
+		Input,
+		Spinner,
+		Toast,
+		Tabs,
+		TabItem,
+		Toggle
+	} from 'flowbite-svelte';
 	import { ArrowRightOutline, ArrowLeftOutline } from 'flowbite-svelte-icons';
 	import RangeSlider from 'svelte-range-slider-pips';
-	import { bleConnect,bleDisconnect } from '$lib/bleClient';
+	import { bleConnect, bleDisconnect } from '$lib/bleClient';
 	import { goto } from '$app/navigation';
-	import { notifier } from '@beyonk/svelte-notifications'
+	import { notifier } from '@beyonk/svelte-notifications';
 
 	let viewIndex = $state(0);
-	let defaultModal = $state(false);	
+	let defaultModal = $state(false);
 	let modeSelect = $state(0);
 	let namaSelect = $state('');
 	let aktuator1Select = $state(0);
@@ -53,11 +65,13 @@
 	let displaySelect = $state(0);
 	let displayModeSelect = $state(0);
 
+	//let settingTitle = $state("Settings")
+
 	let wifiSSID = $state('');
 	let wifiPASS = $state('');
 
 	const displatList = ['Mode BAR', 'Mode Angka'];
-	let tempConfig = [false, false, false, false, false];                     
+	let tempConfig = [false, false, false, false, false];
 	let humConfig = [false, false, false, false, false];
 	let soilConfig = [false, false, false, false, false];
 	let distConfig = [false, false, false, false, false];
@@ -87,11 +101,10 @@
 		gantiSatuan(viewIndex);
 		//update enable status
 		if ($myTask[viewIndex].enable === 1) {
-			isTaskEnable.set(true);
+			$isTaskEnable = true ;
 		} else {
-			isTaskEnable.set(false);
+			$isTaskEnable = false;
 		}
-		
 	}
 	function taskInc() {
 		if (++viewIndex > $myTask.length - 1) {
@@ -100,9 +113,9 @@
 		//console.log('inc view');
 		gantiSatuan(viewIndex);
 		if ($myTask[viewIndex].enable === 1) {
-			isTaskEnable.set(true);
+			$isTaskEnable = true;
 		} else {
-			isTaskEnable.set(false);
+			$isTaskEnable = false;
 		}
 	}
 	function rangeChange() {
@@ -196,21 +209,20 @@
 	function loginClick() {
 		$loginWait = true;
 		setTimeout(() => loginTimeOut(), 10000);
-		loginStart('demoPass',connectionType.MQTT);
+		loginStart('demoPass', connectionType.MQTT);
 	}
 	function loginTimeOut() {
 		if ($loginWait) {
 			$loginWait = false;
 			//alert('kontroller tidak meresponse\nCek koneksi atau kontrollerId');
-			notifier.warning('kontroller tidak meresponse\nCek koneksi atau kontrollerId')
-			if($connectionMode === connectionType.MQTT){
-			mqttDisconnect();
-			$connectionMode = connectionType.NONE
-		}
-		else if($connectionMode === connectionType.BLE){
-			bleDisconnect();
-			$connectionMode = connectionType.NONE
-		}
+			notifier.warning('kontroller tidak meresponse\nCek koneksi atau kontrollerId');
+			if ($connectionMode === connectionType.MQTT) {
+				mqttDisconnect();
+				$connectionMode = connectionType.NONE;
+			} else if ($connectionMode === connectionType.BLE) {
+				bleDisconnect();
+				$connectionMode = connectionType.NONE;
+			}
 		}
 	}
 	function taskChange() {
@@ -230,7 +242,7 @@
 		if ($taskChangeWait) {
 			$taskChangeWait = false;
 			//alert('Kontroller tidak menanggapi !!!');
-			notifier.warning('Kontroller tidak Terhubung !!!')
+			notifier.warning('Kontroller tidak Terhubung !!!');
 		}
 	}
 
@@ -242,28 +254,24 @@
 		}
 	}
 
-	function localLogin(){
+	function localLogin() {
 		//bleConnect()
-		loginStart('demoPass',connectionType.BLE);
+		loginStart('demoPass', connectionType.BLE);
 	}
 
 	function simpanKontrolID() {
 		$kontrolID = inputID;
-		$settingModal = false
-		
+		$settingModal = false;
 	}
 
 	function simpanSetup() {}
 	function updateDisplayClick() {}
 	function demoChange() {}
 
-	function setKontroIdClick(){
-		$settingModal = true
+	function setKontroIdClick() {
+		$settingModal = true;
+		$settingTitle = 'Set kontrolID'
 	}
-	
-	
-
-
 </script>
 
 {#if $isLogin}
@@ -280,14 +288,14 @@
 			<div class="mb-0 text-4xl font-bold">
 				{$myTask[viewIndex].sensorVal} <span class="text-xl">{satuan}</span>
 			</div>
-			<div class="mt-0 text-xs">lastSeen 
+			<div class="mt-0 text-xs">
+				lastSeen
 				{#if $myTask[viewIndex].lastSeen === 0}
-				---
+					---
 				{:else}
-				{unixToLocalString($myTask[viewIndex].lastSeen)}
+					{unixToLocalString($myTask[viewIndex].lastSeen)}
 				{/if}
-				
-				</div>
+			</div>
 
 			<div class="grid h-16 w-5/6 grid-cols-4 border border-blue-300">
 				<div class="col-span-3"></div>
@@ -296,21 +304,19 @@
 					<Checkbox onchange={() => taskChange()} bind:checked={$isTaskEnable}>
 						{#if $taskChangeWait}<Spinner class="me-3" bg="white" size="5" color="yellow" />
 						{/if}
-						<span class="text-xs font-bold font-mono">
-						Auto
-						ON {$myTask[viewIndex].batasBawah} & OFF {$myTask[viewIndex].batasAtas}
+						<span class="font-mono text-xs font-bold">
+							Auto ON {$myTask[viewIndex].batasBawah} & OFF {$myTask[viewIndex].batasAtas}
 						</span>
-						</Checkbox
-					>
+					</Checkbox>
 				</div>
 
-				<button class="flex justify-items-center" onclick={() =>aktuatorClick()}>
+				<button class="flex justify-items-center" onclick={() => aktuatorClick()}>
 					{#if $myTask[viewIndex].aktuator1Val === 1}
 						<img src="/on4.png" alt="On" class="h-8 w-8" />
 					{:else}
 						<img src="/off4.png" alt="Off" class="h-8 w-8" />
-						
-					{/if}</button>
+					{/if}</button
+				>
 			</div>
 		</div>
 		<div class="mt-8 grid grid-cols-7 items-center gap-2">
@@ -347,8 +353,13 @@
 						<Spinner class="me-3" bg="white" size="5" color="yellow" />
 					{/if}Login
 				</button>
-				<button color="blue" class="h-10 w-full rounded-lg border" onclick={() => localLogin()}>Local </button>
-			<button onclick={() => setKontroIdClick()} class="col-span-3 text-blue-800 text-right text-sm">Set kontrollerId</button>
+				<button color="blue" class="h-10 w-full rounded-lg border" onclick={() => localLogin()}
+					>Local
+				</button>
+				<button
+					onclick={() => setKontroIdClick()}
+					class="col-span-3 text-right text-sm text-blue-800">Set kontrollerId</button
+				>
 			</div>
 		</div>
 	</div>
@@ -359,7 +370,7 @@
 
 -->
 
-<Modal class="h-full w-full" title={setupTitle} bind:open={defaultModal}>
+<Modal class="max-h-160 w-full" title={setupTitle} bind:open={defaultModal}>
 	<div class="mx-auto grid max-w-sm grid-cols-2 gap-2">
 		<div class="col-span-2">
 			<label for="pilihMode" class="mb-1 block text-xs dark:text-white">Pilih Mode</label>
@@ -474,19 +485,18 @@
 </Modal>
 
 <!--Setiing modal-->
-<Modal class="h-full w-full" title='Settings' bind:open={$settingModal}>
-
-	<Tabs tabStyle="underline">
-		{#if $isLogin}
+<Modal class="max-h-120 w-full" title={$settingTitle} bind:open={$settingModal}>
+	{#if $isLogin}
+		<Tabs tabStyle="underline">
 			<TabItem open title="Setup">
-				<div class="w-full overflow-auto">
+				<div class="max-h-80 w-full overflow-auto">
 					<div class="mx-auto grid max-w-sm grid-cols-2 gap-4">
 						<!--for setupkontroller network-->
 						{#if $isBleConnected}
 							<div class="col-span-2 grid h-36 w-full grid-cols-2 gap-4 rounded border p-2">
 								<div>
 									<label for="ssid" class="mb-1 block text-xs dark:text-white">ssid</label>
-	
+
 									<input
 										id="ssid"
 										type="text"
@@ -498,7 +508,7 @@
 								</div>
 								<div>
 									<label for="pass" class="mb-1 block text-xs dark:text-white">password</label>
-	
+
 									<input
 										id="pass"
 										type="password"
@@ -513,7 +523,7 @@
 								>
 							</div>
 						{/if}
-	
+
 						<div class="col-span-2 grid h-40 w-full grid-cols-2 gap-4 rounded border p-2">
 							<div>
 								<label for="disp1" class="mb-1 block text-xs dark:text-white">Display</label>
@@ -539,7 +549,8 @@
 									{/each}
 								</select>
 							</div>
-							<Button onclick={() => updateDisplayClick()} class="col-span-2">Update Display</Button>
+							<Button onclick={() => updateDisplayClick()} class="col-span-2">Update Display</Button
+							>
 						</div>
 						<div class="center col-span-2 h-12 w-full rounded border px-8 py-2">
 							<Toggle bind:checked={$demoVal} onchange={() => demoChange()}
@@ -584,11 +595,11 @@
 								</div></button
 							>
 							<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
-	
+
 							<div class="mt-2 ml-2 text-xs">Snr:{sensor.snr}</div>
 							<div class="mt-2 text-xs">Rssi:{sensor.rssi}</div>
 							<div class="mt-2 text-xs">val:{sensor.rawVal}</div>
-	
+
 							<div class="col-span-3 my-2 ml-2 text-xs">
 								lastSeen:{sensor.lastSeen}
 							</div>
@@ -604,11 +615,11 @@
 								</div></button
 							>
 							<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
-	
+
 							<div class="mt-2 ml-2 text-xs font-normal">Snr:{sensor.snr}</div>
 							<div class="mt-2 text-xs font-normal">Rssi:{sensor.rssi}</div>
 							<div class="mt-2 text-xs font-normal">val:{sensor.rawVal}</div>
-	
+
 							<div class="col-span-3 my-2 ml-2 text-xs font-normal">
 								lastSeen:{sensor.lastSeen}
 							</div>
@@ -624,15 +635,15 @@
 								</div></button
 							>
 							<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
-	
+
 							<div class="ml-2 text-xs font-normal">Snr:{sensor.snr}</div>
 							<div class="text-xs font-normal">Rssi:{sensor.rssi}</div>
 							<div class=" text-xs font-normal">val:{sensor.rawVal}</div>
-	
+
 							<div class="ml-2 text-xs font-normal">minVal:{sensor.minValue}</div>
 							<div class="text-xs font-normal">maxVal:{sensor.maxValue}</div>
 							<div></div>
-	
+
 							<div class="col-span-3 ml-2 text-xs font-normal">
 								lastSeen:{sensor.lastSeen}
 							</div>
@@ -648,15 +659,15 @@
 								</div></button
 							>
 							<button class="bg-gray-200 text-center font-bold">{sensor.val} cm</button>
-	
+
 							<div class="ml-2 text-xs font-normal">Snr:{sensor.snr}</div>
 							<div class="text-xs font-normal">Rssi:{sensor.rssi}</div>
 							<div class=" text-xs font-normal">val:{sensor.rawVal}</div>
-	
+
 							<div class="ml-2 text-xs font-normal">minVal:{sensor.minValue}</div>
 							<div class="text-xs font-normal">maxVal:{sensor.maxValue}</div>
 							<div></div>
-	
+
 							<div class="col-span-3 ml-2 text-xs font-normal">
 								lastSeen:{sensor.lastSeen}
 							</div>
@@ -665,22 +676,18 @@
 					<hr class="mb-4" />
 				</div>
 			</TabItem>
-		{:else}
-			<TabItem open title="Setup">
-				<div class="w-full overflow-auto">
-					<div class="mx-auto grid max-w-sm grid-cols-2 gap-4">
-						<input
-							type="text"
-							bind:value={inputID}
-							class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-							placeholder={$kontrolID}
-							required
-						/>
-						<Button color="green" onclick={() => simpanKontrolID()}>Simpan</Button>
-						<div class="col-span-2"></div>
-					</div>
-				</div>
-			</TabItem>
-		{/if}
-	</Tabs>
+		</Tabs>
+	{:else}
+		<div class="mx-auto grid max-w-sm grid-cols-2 gap-4">			
+			<input
+				type="text"
+				bind:value={inputID}
+				class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+				placeholder={$kontrolID}
+				required
+			/>
+			<Button color="green" onclick={() => simpanKontrolID()}>Simpan</Button>
+			<div class="col-span-2"></div>
+		</div>
+	{/if}
 </Modal>
