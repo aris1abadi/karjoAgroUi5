@@ -396,7 +396,7 @@ export function cekIncomingMsg(topic: string, payload: string) {
         }
 
       }else if(cmd === 'sensorVal'){
-       // const newMsg = JSON.parse(payload)
+        const newMsg = JSON.parse(payload)
         console.log('newSensorVal: ' + payload)
 
         myTask.update(task => {
