@@ -24,7 +24,8 @@
 		isBleConnected,
 		demoVal,
 		demoWait,
-		settingTitle
+		settingTitle,
+		isDemo,
 	} from '$lib/stores';
 	import { unixToLocalString } from '$lib/utils';
 	import {
@@ -37,9 +38,10 @@
 		Toast,
 		Tabs,
 		TabItem,
-		Toggle
+		Toggle,
+		Select
 	} from 'flowbite-svelte';
-	import { ArrowRightOutline, ArrowLeftOutline } from 'flowbite-svelte-icons';
+	import { ArrowRightOutline, ArrowLeftOutline,AngleLeftOutline,AngleRightOutline } from 'flowbite-svelte-icons';
 	import RangeSlider from 'svelte-range-slider-pips';
 	import { bleConnect, bleDisconnect } from '$lib/bleClient';
 	import { goto } from '$app/navigation';
@@ -54,6 +56,31 @@
 	let sensorSelect = $state(0);
 	let sensorSelectList = $state(0);
 
+	const channelList =[
+		{value:0,name:"CH1 920Mhz"},
+		{value:1,name:"CH2 921Mhz"},
+		{value:2,name:"CH3 922Mhz"},
+		{value:3,name:"CH4 923Mhz"},
+		{value:4,name:"CH5 925Mhz"},
+
+	]
+
+	let channelSelected =$state(0);
+
+	const intervalList = [
+		{value: 5,name:"5 Menit"},
+		{value: 10,name:"10 Menit"},
+		{value: 15,name:"15 Menit"},
+		{value: 30,name:"30 Menit"},
+		{value: 40,name:"40 Menit"},
+		{value: 50,name:"50 Menit"},
+		{value: 60,name:"60 Menit"},
+		
+	]
+	let intervalSelected =$state(5)
+
+	
+
 	let rangeValue = $state([20, 80]);
 	let minSpinner = $state(10);
 	let maxSpinner = $state(100);
@@ -64,6 +91,8 @@
 	let inputID = $state('');
 	let displaySelect = $state(0);
 	let displayModeSelect = $state(0);
+
+	let lastDemo = $isDemo;
 
 	//let settingTitle = $state("Settings")
 
@@ -122,7 +151,9 @@
 		dummyTask.batasBawah = rangeValue[0];
 		dummyTask.batasAtas = rangeValue[1];
 	}
+	
 	function simpanTask() {
+		dummyTask.sensorInterval = intervalSelected;
 		dummyTask.nama = namaSelect;
 		console.log($state.snapshot(dummyTask));
 		kirimMsg(msgType.TASK, viewIndex, 'updateTask', JSON.stringify(dummyTask));
@@ -179,7 +210,7 @@
 		modeSelect = $myTask[viewIndex].mode;
 		namaSelect = $myTask[viewIndex].nama;
 		sensorSelectList = $myTask[viewIndex].mode;
-
+		intervalSelected = $myTask[viewIndex].sensorInterval;
 		aktuator1Select = $myTask[viewIndex].aktuator1 - 1;
 		aktuator2Select = $myTask[viewIndex].aktuator2 - 1;
 		rangeValue[0] = $myTask[viewIndex].batasBawah;
@@ -265,13 +296,41 @@
 	}
 
 	function simpanSetup() {}
-	function updateDisplayClick() {}
-	function demoChange() {}
+	function updateDisplayClick() {
+		if (displaySelect > $myTask.length) {
+			alert('kontrol tidak ditemukan');
+		} else {
+			let display_msg = String(displaySelect) + ',' + String(displayModeSelect) + ',-,';
+			kirimMsg(msgType.KONTROL, 0, 'setDisplay', display_msg);
+			console.log('update display ' + display_msg);
+		}
+	}
+	function demoChange() {
+		$demoWait = true;
+		setTimeout(() => {
+			$demoWait = false;
+			$demoVal = lastDemo;
+		}, 5000);
+
+		let demomsg = '0';
+		if ($demoVal) {
+			demomsg = '1';
+			lastDemo = true;
+		} else {
+			lastDemo = false;
+		}
+		kirimMsg(msgType.KONTROL, 0, 'demoMode', demomsg);
+	}
 
 	function setKontroIdClick() {
 		$settingModal = true;
 		$settingTitle = 'Set kontrolID'
 	}
+
+	function channelChange(){
+		alert("chanel Noe: " + channelList[channelSelected].name)
+	}
+
 </script>
 
 {#if $isLogin}
@@ -312,9 +371,9 @@
 
 				<button class="flex justify-items-center" onclick={() => aktuatorClick()}>
 					{#if $myTask[viewIndex].aktuator1Val === 1}
-						<img src="/on4.png" alt="On" class="h-8 w-8" />
+						<img src="on4a.png" alt="On" class="h-8 w-8" />
 					{:else}
-						<img src="/off4.png" alt="Off" class="h-8 w-8" />
+						<img src="off4a.png" alt="Off" class="h-8 w-8" />
 					{/if}</button
 				>
 			</div>
@@ -426,37 +485,50 @@
 				{/each}
 			</select>
 		</div>
+		<Label class="text-xs">Pilih Sensor
+			<Select			
+				bind:value={sensorSelect}
+				onchange={() => sensorSelect_click()}
+				class="text-sm"
+			>
+				{#if sensorSelectList === $taskMode[0]}
+					{#each $myTemperatureSensor as sensor, idx}
+						<option value={idx}>Sensor Temperature {idx + 1} ({sensor.nodeId}) </option>
+					{/each}
+				{:else if sensorSelectList === $taskMode[1]}
+					{#each $myHumiditySensor as sensor, idx}
+						<option value={idx}>Sensor Humidity {idx + 1} ({sensor.nodeId}) </option>
+					{/each}
+				{:else if sensorSelectList === $taskMode[2]}
+					{#each $mySoilSensor as sensor, idx}
+						<option value={idx}>Sensor Lengas {idx + 1} ({sensor.nodeId}) </option>
+					{/each}
+				{:else if sensorSelectList === $taskMode[3]}
+					{#each $myDistanceSensor as sensor, idx}
+						<option value={idx}>Sensor Air {idx + 1} ({sensor.nodeId}) </option>
+					{/each}
+				{:else if sensorSelectList === $taskMode[4]}
+					<option value={0}>---</option>
+				{/if}
+			</Select>
+			</Label>
+
+			<Label class="text-xs">Sensor Interval {intervalSelected} Menit
+				<RangeSlider
+			
+			
+			min={5}
+			max={60}
+			
+			bind:value={intervalSelected}
+		/>
+
+			</Label>
+	
 	</div>
 
 	<div class="my-0">
-		<label for="pilihSensor" class="mb-1 block text-xs dark:text-white">Pilih Sensor</label>
-		<select
-			id="pilihSensor"
-			bind:value={sensorSelect}
-			onchange={() => sensorSelect_click()}
-			class="mb-1 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-		>
-			{#if sensorSelectList === $taskMode[0]}
-				{#each $myTemperatureSensor as sensor, idx}
-					<option value={idx}>Sensor Temperature {idx + 1} ({sensor.nodeId}) </option>
-				{/each}
-			{:else if sensorSelectList === $taskMode[1]}
-				{#each $myHumiditySensor as sensor, idx}
-					<option value={idx}>Sensor Humidity {idx + 1} ({sensor.nodeId}) </option>
-				{/each}
-			{:else if sensorSelectList === $taskMode[2]}
-				{#each $mySoilSensor as sensor, idx}
-					<option value={idx}>Sensor Lengas {idx + 1} ({sensor.nodeId}) </option>
-				{/each}
-			{:else if sensorSelectList === $taskMode[3]}
-				{#each $myDistanceSensor as sensor, idx}
-					<option value={idx}>Sensor Air {idx + 1} ({sensor.nodeId}) </option>
-				{/each}
-			{:else if sensorSelectList === $taskMode[4]}
-				<option value={0}>---</option>
-			{/if}
-		</select>
-	</div>
+			</div>
 	<div class="mt-2 rounded-sm border border-gray-200 dark:border-gray-700">
 		<div class="mt-2 grid grid-cols-2 justify-items-center">
 			{#if $myTask[viewIndex].mode === $taskMode[0]}
@@ -485,12 +557,12 @@
 </Modal>
 
 <!--Setiing modal-->
-<Modal class="max-h-120 w-full" title={$settingTitle} bind:open={$settingModal}>
+<Modal class="max-h-120 w-screen" title={$settingTitle} bind:open={$settingModal}>
 	{#if $isLogin}
 		<Tabs tabStyle="underline">
 			<TabItem open title="Setup">
 				<div class="max-h-80 w-full overflow-auto">
-					<div class="mx-auto grid max-w-sm grid-cols-2 gap-4">
+					<div class="mx-auto grid w-full grid-cols-2 gap-4">
 						<!--for setupkontroller network-->
 						{#if $isBleConnected}
 							<div class="col-span-2 grid h-36 w-full grid-cols-2 gap-4 rounded border p-2">
@@ -522,6 +594,21 @@
 									>Simpan</Button
 								>
 							</div>
+							<div class="col-span-2">
+								<Label>
+									Pilih Channel
+									<Select									  
+									  items={channelList}
+									  bind:value={channelSelected}
+									  
+									  onchange={() => {
+										channelChange();
+									  }}
+									/>
+								  </Label>
+								  
+							</div>
+							
 						{/if}
 
 						<div class="col-span-2 grid h-40 w-full grid-cols-2 gap-4 rounded border p-2">
@@ -549,7 +636,7 @@
 									{/each}
 								</select>
 							</div>
-							<Button onclick={() => updateDisplayClick()} class="col-span-2">Update Display</Button
+							<Button onclick={() => updateDisplayClick()} class="col-span-2 h-10">Update Display</Button
 							>
 						</div>
 						<div class="center col-span-2 h-12 w-full rounded border px-8 py-2">

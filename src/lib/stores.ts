@@ -22,6 +22,7 @@ export const isLogin = writable(false)
 export const loginWait = writable(false)
 export const demoVal = writable(false)
 export const demoWait = writable(false)
+export const isDemo = writable(false);
 export const isTaskEnable  = writable(false)
 export const taskChangeWait = writable(false)
 export const settingModal = writable(false);
