@@ -155,6 +155,7 @@
 	function simpanTask() {
 		dummyTask.sensorInterval = intervalSelected;
 		dummyTask.nama = namaSelect;
+		dummyTask.mode = modeSelect;;
 		console.log($state.snapshot(dummyTask));
 		kirimMsg(msgType.TASK, viewIndex, 'updateTask', JSON.stringify(dummyTask));
 		defaultModal = false;
