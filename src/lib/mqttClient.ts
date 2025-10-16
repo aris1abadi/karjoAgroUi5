@@ -1,7 +1,7 @@
 //import * as mqtt from 'mqtt';
 import mqtt from 'mqtt';
 import { get } from 'svelte/store';
-import { msgType,demoWait,isDemo, isMqttConnected, isControllerConnected, myTask, myAktuator, myHumiditySensor, myTemperatureSensor, mySoilSensor, myDistanceSensor, isLogin, pubMqtt, subMqtt, loginWait, taskChangeWait, isTaskEnable, connectionType, connectionMode, logMsg, isBleConnected } from './stores';
+import { msgType,demoWait,isDemo, isMqttConnected, isControllerConnected, myTask, myAktuator, myHumiditySensor, myTemperatureSensor, mySoilSensor, myDistanceSensor, isLogin, pubMqtt, subMqtt, loginWait, taskChangeWait, isTaskEnable, connectionType, connectionMode, logMsg, isBleConnected, nodeType, logHistory } from './stores';
 import { bleConnect, bleDisconnect, bleSendMessage } from './bleClient';
 
 const clientId = "CL" + Math.random().toString(16).substr(2, 4).toUpperCase();
@@ -251,11 +251,26 @@ export function cekIncomingMsg(topic: string, payload: string) {
       }else if(cmd === 'sensorVal'){
         const newMsg = JSON.parse(payload)
         //console.log('newSensorVal: ' + payload)
+        if(newMsg.type === nodeType.NODE_TEMPERATURE){
+
+          myTemperatureSensor.update(tempSensor =>{tempSensor[newMsg.nomerSensor] = {...tempSensor[newMsg.nomerSensor],sensorVal:newMsg.sensorVal}
+          return tempSensor
+          })
+        }
 
         myTask.update(task => {
           task[idx] = { ...task[idx], sensorVal: newMsg.sensorVal,lastSeen:newMsg.lastSeen };
           return task;
         });
+      }else if(cmd ==='resp_getHistory'){   
+        const msgSplit = JSON.stringify(payload.split('\n'))    
+        logHistory.set(JSON.parse(msgSplit));
+      
+
+      }else if(cmd === 'resp_clearHistory'){
+        
+        logHistory.set([]);
+
       }
     }
   }

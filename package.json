@@ -51,6 +51,7 @@
 	"dependencies": {
 		"@beyonk/svelte-notifications": "^4.3.0",
 		"mqtt": "^5.14.0",
+		"qrcode": "^1.5.4",
 		"svelte-persisted-store": "^0.12.0"
 	}
 }

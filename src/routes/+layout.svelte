@@ -3,7 +3,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { get } from 'svelte/store';
 	import { HomeOutline } from 'flowbite-svelte-icons';
-	import { isMqttConnected, isControllerConnected, isLogin,kontrolID ,settingTitle, connectionMode, connectionType,settingModal} from '$lib/stores';
+	import { isMqttConnected, isControllerConnected, isLogin,kontrolID ,settingTitle, connectionMode, connectionType,settingModal, isBleConnected} from '$lib/stores';
 	import { BottomNav, BottomNavItem, Skeleton, ImagePlaceholder } from 'flowbite-svelte';
 	import {
 		HomeSolid,
@@ -41,7 +41,7 @@
 	}
 
 	function goHome(){
-		goto('/');
+		//goto('/');
 		$isLogin = false
 	}
 
@@ -66,7 +66,7 @@
 		<MobilePhoneSolid class="h-5 w-5 shrink-0 text-center text-white" />
 		{#if $isMqttConnected}
 			<ArrowsRepeatOutline class="h-4 w-4 shrink-0 text-center" />
-			<CloudArrowUpSolid class="h-5 w-5 shrink-0 text-white" />		
+			<CloudArrowUpSolid class="h-5 w-5 shrink-0 text-white" />	
 		{/if}
 		{#if $isControllerConnected}
 		<ArrowsRepeatOutline class="h-4 w-4 shrink-0" />
@@ -88,9 +88,13 @@
 			<BottomNavItem btnName="Home" href="/">
 				<HomeSolid />
 			</BottomNavItem>
+			{#if $isBleConnected}
 			<BottomNavItem btnName="Setup" onclick={settingClick}>
 				<AdjustmentsVerticalOutline />
 			</BottomNavItem>
+			{:else}
+			<div></div>
+			{/if}
 			<BottomNavItem btnName="Keluar" onclick={logoutClick}>
 				<ForwardSolid />
 			</BottomNavItem>
