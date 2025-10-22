@@ -85,6 +85,7 @@
 		{ value: 60, name: '60 Menit' }
 	];
 	let intervalSelected = $state(5);
+	let displayBrignest = $state(40);
 
 	let rangeValue = $state([20, 80]);
 	let minSpinner = $state(10);
@@ -306,7 +307,7 @@
 		if (displaySelect > $myTask.length) {
 			alert('kontrol tidak ditemukan');
 		} else {
-			let display_msg = String(displaySelect) + ',' + String(displayModeSelect) + '30,80,-,';
+			let display_msg = String(displaySelect) + ',' + String(displayModeSelect) + ',30,80,' + String(displayBrignest) + ',-,';
 			kirimMsg(msgType.KONTROL, 0, 'setDisplay', display_msg);
 			console.log('update display ' + display_msg);
 		}
@@ -342,6 +343,15 @@
 	}
 	function clearHistoryClick() {
 		kirimMsg(msgType.TASK, viewIndex, 'clearHistory', '0');
+	}
+	function simpanNetwork(){
+		if(wifiSSID && wifiPASS){
+			const netParam = "newNetwok," + wifiSSID + ',' + wifiPASS + ',updateNetwork'
+			kirimMsg(msgType.KONTROL, 0, 'updateNetwork', netParam);
+		}else{
+			alert('!!!Nama wifi dan password harus diisi!!!')
+		}
+		
 	}
 </script>
 
@@ -716,7 +726,7 @@
 
 							<input
 								id="pass"
-								type="password"
+								type="text"
 								bind:value={wifiPASS}
 								class=" h-8 w-full rounded border bg-gray-50 text-sm text-gray-900"
 								placeholder="......"
@@ -765,6 +775,13 @@
 								<option value={idx}>{display}</option>
 							{/each}
 						</select>
+					</div>
+					<div class="col-span-2">
+						<Label class="text-xs"
+					>Kecerahan {displayBrignest}
+					<RangeSlider min={20} max={80} bind:value={displayBrignest} />
+				</Label>
+						
 					</div>
 					<Button onclick={() => updateDisplayClick()} class="col-span-2 h-10"
 						>Update Display</Button

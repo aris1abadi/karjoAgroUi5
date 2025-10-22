@@ -88,13 +88,9 @@
 			<BottomNavItem btnName="Home" href="/">
 				<HomeSolid />
 			</BottomNavItem>
-			{#if $isBleConnected}
 			<BottomNavItem btnName="Setup" onclick={settingClick}>
 				<AdjustmentsVerticalOutline />
 			</BottomNavItem>
-			{:else}
-			<div></div>
-			{/if}
 			<BottomNavItem btnName="Keluar" onclick={logoutClick}>
 				<ForwardSolid />
 			</BottomNavItem>
