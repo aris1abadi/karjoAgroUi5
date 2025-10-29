@@ -1,7 +1,7 @@
 //import * as mqtt from 'mqtt';
 import mqtt from 'mqtt';
 import { get } from 'svelte/store';
-import { msgType,demoWait,isDemo, isMqttConnected, isControllerConnected, myTask, myAktuator, myHumiditySensor, myTemperatureSensor, mySoilSensor, myDistanceSensor, isLogin, pubMqtt, subMqtt, loginWait, taskChangeWait, isTaskEnable, connectionType, connectionMode, logMsg, isBleConnected, nodeType, logHistory } from './stores';
+import { msgType,demoWait,isDemo, isMqttConnected, isControllerConnected, myTask, myAktuator, mySensor, isLogin, pubMqtt, subMqtt, loginWait, taskChangeWait, isTaskEnable, connectionType, connectionMode, logMsg, isBleConnected, nodeType, logHistory, localUrl } from './stores';
 import { bleConnect, bleDisconnect, bleSendMessage } from './bleClient';
 
 const clientId = "CL" + Math.random().toString(16).substr(2, 4).toUpperCase();
@@ -163,10 +163,11 @@ export function mqttDisconnect() {
 // Example: Disconnect the client
 // mqttClientWrapper.disconnect();
 
-export function cekIncomingMsg(topic: string, payload: string) {
+export function cekIncomingMsg(topic: string, msg: string) {
 
-  if (lastMsg != payload) {
-    lastMsg = payload
+  if (lastMsg != msg) {
+    lastMsg = msg
+    const payload = msg;
     //console.log("Topic: " + topic + "\nMsg: " + payload);
     const topicSplit = topic.split('/')
     const type = parseInt(topicSplit[2])
@@ -177,10 +178,7 @@ export function cekIncomingMsg(topic: string, payload: string) {
         const msgSplit = JSON.parse(payload).infoAllStatus
         myTask.set(JSON.parse(msgSplit[0]).task)
         myAktuator.set(JSON.parse(msgSplit[1]).aktuator)
-        myTemperatureSensor.set(JSON.parse(msgSplit[2]).TemperatureSensor)
-        myHumiditySensor.set(JSON.parse(msgSplit[3]).HumiditySensor)
-        mySoilSensor.set(JSON.parse(msgSplit[4]).SoilSensor)
-        myDistanceSensor.set(JSON.parse(msgSplit[5]).DistanceSensor)
+        mySensor.set(JSON.parse(msgSplit[2]).sensor)       
         loginWait.set(false)
         isControllerConnected.set(true)
 
@@ -251,12 +249,14 @@ export function cekIncomingMsg(topic: string, payload: string) {
       }else if(cmd === 'sensorVal'){
         const newMsg = JSON.parse(payload)
         //console.log('newSensorVal: ' + payload)
+        /*
         if(newMsg.type === nodeType.NODE_TEMPERATURE){
 
           myTemperatureSensor.update(tempSensor =>{tempSensor[newMsg.nomerSensor] = {...tempSensor[newMsg.nomerSensor],sensorVal:newMsg.sensorVal}
           return tempSensor
           })
         }
+          */
 
         myTask.update(task => {
           task[idx] = { ...task[idx], sensorVal: newMsg.sensorVal,lastSeen:newMsg.lastSeen };
@@ -293,10 +293,47 @@ export function loginStart(pass: string, mode) {
       }
       mqttConnect(formatedPass);
       logMsg.set('mqtt lgin request')
+    }
+    else if (mode === connectionType.LOCAL_WEB) {
+      if (get(isBleConnected)) {
+        bleDisconnect()
+      }
+     localLoginRequest()
+     
+      logMsg.set('local login request')
     } else {
       logMsg.set('no connection ')
     }
   }
+
+  async function localLoginRequest() {
+   // const url = `http://{}/kontrol`; 
+   const dataKontrol = {
+    topic: 'abadinet-in/KA-40B1/0/0/loginRequest',
+    payload: '0000,demoPass,-,;'
+};
+    
+    try {
+        const response = await fetch(localUrl, {
+            method: 'POST', 
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            // Kirim data dalam format form URL-encoded agar sesuai dengan server.arg()
+            body: new URLSearchParams(dataKontrol),
+        });
+        // ... (Logika respons sama seperti metode GET di atas)
+        if (response.ok) {
+          const data = await response.json(); // Karena ESP32 mengirim JSON
+          console.log('Respons dari ESP32:', data);
+          // Lakukan sesuatu dengan data, misalnya update state Svelte
+      } else {
+          console.error('Request gagal dengan status:', response.status);
+      }
+    } catch (error) {
+        console.error('Terjadi error saat POST fetch:', error);
+    }
+}
 
 
   //kirimMsg(msgType.KONTROL, 0, 'loginRequest', formatedPass);

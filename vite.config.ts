@@ -54,5 +54,21 @@ export default defineConfig({
 	server: {
 		host: true, // Allow external access (e.g., from ngrok)
 		allowedHosts: ['.ngrok-free.app'], // Allow all ngrok subdomains
+
+		// --- KONFIGURASI PROXY UNTUK ESP32 DIMULAI DI SINI ---
+        proxy: {
+            // Ketika SvelteKit melihat permintaan yang dimulai dengan '/api' 
+            // (misalnya, fetch('/api/kontrol')),
+            '/api': {
+                // Permintaan akan dialihkan ke IP ESP32 Anda
+                target: 'http://10.10.10.1', // <-- GANTI DENGAN IP ESP32 ANDA
+                // Ini akan mengubah header Host dari 'localhost' menjadi IP target
+                changeOrigin: true, 
+                // Ini adalah kunci: akan menghapus '/api' dari path sebelum mengirim ke ESP32.
+                // Jadi, '/api/kontrol' menjadi '/kontrol' saat dikirim ke 192.168.1.100.
+                //rewrite: (path) => path.replace(/^\/api/, ''), 
+            }
+        }
+        // --- KONFIGURASI PROXY SELESAI DI SINI ---
 	},
 });

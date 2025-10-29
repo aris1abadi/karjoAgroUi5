@@ -7,10 +7,7 @@
 		myTask,
 		myAktuator,
 		taskModeTxt,
-		myTemperatureSensor,
-		myHumiditySensor,
-		mySoilSensor,
-		myDistanceSensor,
+		mySensor,
 		isLogin,
 		loginWait,
 		isTaskEnable,
@@ -27,7 +24,8 @@
 		demoWait,
 		settingTitle,
 		isDemo,
-		logHistory
+		logHistory,
+		subMqtt,pubMqtt
 	} from '$lib/stores';
 	import { unixToLocalString } from '$lib/utils';
 	import {
@@ -294,12 +292,14 @@
 
 	function localLogin() {
 		//bleConnect()
-		loginStart('demoPass', connectionType.BLE);
+		loginStart('demoPass', connectionType.LOCAL_WEB);
 	}
 
 	function simpanKontrolID() {
 		$kontrolID = inputID;
 		$settingModal = false;
+		$subMqtt = "abadinet-out/" + $kontrolID + "/#"
+		$pubMqtt = "abadinet-in/" + $kontrolID + "/"
 	}
 
 	function simpanSetup() {}
@@ -512,25 +512,11 @@
 				<Label class="text-xs"
 					>Pilih Sensor
 					<Select bind:value={sensorSelect} onchange={() => sensorSelect_click()} class="text-sm">
-						{#if sensorSelectList === $taskMode[0]}
-							{#each $myTemperatureSensor as sensor, idx}
+						
+							{#each $mySensor as sensor, idx}
 								<option value={idx}>Sensor Temperature {idx + 1} ({sensor.nodeId}) </option>
 							{/each}
-						{:else if sensorSelectList === $taskMode[1]}
-							{#each $myHumiditySensor as sensor, idx}
-								<option value={idx}>Sensor Humidity {idx + 1} ({sensor.nodeId}) </option>
-							{/each}
-						{:else if sensorSelectList === $taskMode[2]}
-							{#each $mySoilSensor as sensor, idx}
-								<option value={idx}>Sensor Lengas {idx + 1} ({sensor.nodeId}) </option>
-							{/each}
-						{:else if sensorSelectList === $taskMode[3]}
-							{#each $myDistanceSensor as sensor, idx}
-								<option value={idx}>Sensor Air {idx + 1} ({sensor.nodeId}) </option>
-							{/each}
-						{:else if sensorSelectList === $taskMode[4]}
-							<option value={0}>---</option>
-						{/if}
+						
 					</Select>
 				</Label>
 
@@ -590,7 +576,7 @@
 		</TabItem>
 		<TabItem title="Sensor">
 			<div class="no-scrollbar h-full w-full overflow-auto">
-				{#each $myTemperatureSensor as sensor, idx}
+				{#each $mySensor as sensor, idx}
 					<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
 						<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
 							><div class="ml-2 mt-2 font-bold">SensorTemperature{idx + 1}</div>
@@ -610,74 +596,7 @@
 					</div>
 				{/each}
 				<hr class="mb-4" />
-				{#each $myHumiditySensor as sensor, idx}
-					<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
-						<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
-							><div class="ml-2 mt-2 font-bold">SensorHumidity{idx + 1}</div>
-							<div class="ml-2 text-xs font-normal">
-								NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
-							</div></button
-						>
-						<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
-
-						<div class="ml-2 mt-2 text-xs font-normal">Snr:{sensor.snr}</div>
-						<div class="mt-2 text-xs font-normal">Rssi:{sensor.rssi}</div>
-						<div class="mt-2 text-xs font-normal">val:{sensor.rawVal}</div>
-
-						<div class="col-span-3 my-2 ml-2 text-xs font-normal">
-							lastSeen:{sensor.lastSeen}
-						</div>
-					</div>
-				{/each}
-				<hr class="mb-4" />
-				{#each $mySoilSensor as sensor, idx}
-					<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
-						<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
-							><div class="ml-2 mt-2 font-bold">SensorLengas{idx + 1}</div>
-							<div class="ml-2 text-xs font-normal">
-								NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
-							</div></button
-						>
-						<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
-
-						<div class="ml-2 text-xs font-normal">Snr:{sensor.snr}</div>
-						<div class="text-xs font-normal">Rssi:{sensor.rssi}</div>
-						<div class=" text-xs font-normal">val:{sensor.rawVal}</div>
-
-						<div class="ml-2 text-xs font-normal">minVal:{sensor.minValue}</div>
-						<div class="text-xs font-normal">maxVal:{sensor.maxValue}</div>
-						<div></div>
-
-						<div class="col-span-3 ml-2 text-xs font-normal">
-							lastSeen:{sensor.lastSeen}
-						</div>
-					</div>
-				{/each}
-				<hr class="mb-4" />
-				{#each $myDistanceSensor as sensor, idx}
-					<div class="h-34 mb-4 grid w-full grid-cols-3 content-start rounded border">
-						<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
-							><div class="ml-2 mt-2 font-bold">SensorIntermittent{idx + 1}</div>
-							<div class="ml-2 text-xs font-normal">
-								NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
-							</div></button
-						>
-						<button class="bg-gray-200 text-center font-bold">{sensor.val} cm</button>
-
-						<div class="ml-2 text-xs font-normal">Snr:{sensor.snr}</div>
-						<div class="text-xs font-normal">Rssi:{sensor.rssi}</div>
-						<div class=" text-xs font-normal">val:{sensor.rawVal}</div>
-
-						<div class="ml-2 text-xs font-normal">minVal:{sensor.minValue}</div>
-						<div class="text-xs font-normal">maxVal:{sensor.maxValue}</div>
-						<div></div>
-
-						<div class="col-span-3 ml-2 text-xs font-normal">
-							lastSeen:{sensor.lastSeen}
-						</div>
-					</div>
-				{/each}
-				<hr class="mb-4" />
+				
 			</div>
 		</TabItem>
 		<TabItem title="History">

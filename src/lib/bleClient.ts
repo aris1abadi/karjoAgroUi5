@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { logMsg, msgType, isMqttConnected, isControllerConnected, myTask, myAktuator, myHumiditySensor, myTemperatureSensor, mySoilSensor, myDistanceSensor, isLogin, pubMqtt, subMqtt, loginWait, taskChangeWait, isTaskEnable, kontrolID, connectionMode, connectionType, isBleConnected } from './stores';
+import { logMsg, msgType, isMqttConnected, isControllerConnected, myTask, myAktuator, mySensor,  isLogin, pubMqtt, subMqtt, loginWait, taskChangeWait, isTaskEnable, kontrolID, connectionMode, connectionType, isBleConnected } from './stores';
 import { cekIncomingMsg } from './mqttClient';
 
 let btBuff = "";
