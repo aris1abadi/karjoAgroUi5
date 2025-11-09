@@ -298,7 +298,8 @@ export function loginStart(pass: string, mode) {
       if (get(isBleConnected)) {
         bleDisconnect()
       }
-     localLoginRequest()
+      const loginTopic = 'abadinet-in/KA-40B1/0/0/loginRequest'
+     kirimViaWeb(loginTopic,formatedPass)
      
       logMsg.set('local login request')
     } else {
@@ -306,34 +307,6 @@ export function loginStart(pass: string, mode) {
     }
   }
 
-  async function localLoginRequest() {
-   // const url = `http://{}/kontrol`; 
-   const dataKontrol = {
-    topic: 'abadinet-in/KA-40B1/0/0/loginRequest',
-    payload: '0000,demoPass,-,;'
-};
-    
-    try {
-        const response = await fetch(localUrl, {
-            method: 'POST', 
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            // Kirim data dalam format form URL-encoded agar sesuai dengan server.arg()
-            body: new URLSearchParams(dataKontrol),
-        });
-        // ... (Logika respons sama seperti metode GET di atas)
-        if (response.ok) {
-          const data = await response.json(); // Karena ESP32 mengirim JSON
-          console.log('Respons dari ESP32:', data);
-          // Lakukan sesuatu dengan data, misalnya update state Svelte
-      } else {
-          console.error('Request gagal dengan status:', response.status);
-      }
-    } catch (error) {
-        console.error('Terjadi error saat POST fetch:', error);
-    }
-}
 
 
   //kirimMsg(msgType.KONTROL, 0, 'loginRequest', formatedPass);
@@ -344,8 +317,40 @@ export function updateTask(newTask) {
   kirimMsg(msgType.TASK, 0, 'updateTask', taskStr);
 }
 
+export async function kirimViaWeb(tp,msg){
+
+  
+    // Gunakan path /api, yang akan di-rewrite menjadi /kontrol di ESP32
+    const url = '/api/kontrol?topic=' + tp + '&payload=' + msg
+
+    try {
+        const response = await fetch(url);
+    /*
+    const response = await fetch(localUrl, {
+        method: 'POST', 
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        // Kirim data dalam format form URL-encoded agar sesuai dengan server.arg()
+        body: new URLSearchParams(dataWeb),
+    });
+    */
+    // ... (Logika respons sama seperti metode GET di atas)
+    if (response.ok) {
+      const data = await response.json(); // Karena ESP32 mengirim JSON
+      console.log('Respons dari dari server:', data);
+      // Lakukan sesuatu dengan data, misalnya update state Svelte
+      cekIncomingMsg(data.topic,data.payload)
+  } else {
+      console.error('Request gagal dengan status:', response.status);
+  }
+} catch (error) {
+    console.error('Terjadi error saat POST fetch:', error);
+}
+}
+
 export function kirimMsg(type, num, cmd, msg: string) {
-  let ms = get(pubMqtt) + type + "/" + num + "/" + cmd;
+  const ms = get(pubMqtt) + type + "/" + num + "/" + cmd;
   const topicMsg = ms.replace(/\s/g, '');
   const bleMsg = topicMsg + "$" + msg + "$msgCmd$";
   if (get(isMqttConnected)) {
@@ -353,6 +358,9 @@ export function kirimMsg(type, num, cmd, msg: string) {
     mqttClientWrapper.publish(topicMsg, msg);
   } else if (get(isBleConnected)) {
     bleSendMessage(bleMsg)
+  }else{
+    //local
+    kirimViaWeb(ms,msg)
   }
 
 
