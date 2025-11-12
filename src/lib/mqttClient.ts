@@ -169,6 +169,7 @@ export function cekIncomingMsg(topic: string, msg: string) {
     lastMsg = msg
     const payload = msg;
     //console.log("Topic: " + topic + "\nMsg: " + payload);
+    //format topic  abadinet-out/KA-40B1/task/idx/cmd
     const topicSplit = topic.split('/')
     const type = parseInt(topicSplit[2])
     const idx = parseInt(topicSplit[3])
@@ -247,16 +248,7 @@ export function cekIncomingMsg(topic: string, msg: string) {
         }
 
       }else if(cmd === 'sensorVal'){
-        const newMsg = JSON.parse(payload)
-        //console.log('newSensorVal: ' + payload)
-        /*
-        if(newMsg.type === nodeType.NODE_TEMPERATURE){
-
-          myTemperatureSensor.update(tempSensor =>{tempSensor[newMsg.nomerSensor] = {...tempSensor[newMsg.nomerSensor],sensorVal:newMsg.sensorVal}
-          return tempSensor
-          })
-        }
-          */
+        const newMsg = JSON.parse(payload)       
 
         myTask.update(task => {
           task[idx] = { ...task[idx], sensorVal: newMsg.sensorVal,lastSeen:newMsg.lastSeen };

@@ -57,7 +57,7 @@
 <NotificationDisplay />
 
 <div class="mx-auto w-full max-w-md items-center">
-	<div class="mb-0 mt-4 text-center text-2xl text-white font-mono  font-bold">Irigasi Otomatis</div>
+	<div class="mb-0 mt-4 text-center text-2xl text-white font-mono  font-bold">Kontrol Irigasi</div>
 	<div class="text-center text-white text-xs">KarjoAgro {$kontrolID}</div>
 	<div class="grid grid-cols-3 gap-4">
 		<div></div>

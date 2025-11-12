@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { loginStart, kirimMsg, mqttDisconnect } from '$lib/mqttClient';
-	import QRCode from 'qrcode';
+	//import QRCode from 'qrcode';
 	import {
 		taskMode,
 		myTask,
 		myAktuator,
-		taskModeTxt,
 		mySensor,
 		isLogin,
 		loginWait,
@@ -14,7 +13,6 @@
 		isMqttConnected,
 		taskChangeWait,
 		msgType,
-		logMsg,
 		connectionType,
 		connectionMode,
 		settingModal,
@@ -25,7 +23,10 @@
 		settingTitle,
 		isDemo,
 		logHistory,
-		subMqtt,pubMqtt
+		subMqtt,
+		pubMqtt,
+		nodeType,
+		sensorListTxt
 	} from '$lib/stores';
 	import { unixToLocalString } from '$lib/utils';
 	import {
@@ -103,7 +104,7 @@
 	let wifiSSID = $state('');
 	let wifiPASS = $state('');
 
-	const displatList = ['Mode BAR', 'Mode Angka'];
+	const displatList = ['Mode Angka', 'Mode BAR1', 'Mode BAR2'];
 	let tempConfig = [false, false, false, false, false];
 	let humConfig = [false, false, false, false, false];
 	let soilConfig = [false, false, false, false, false];
@@ -114,15 +115,17 @@
 	onMount(() => {});
 
 	function gantiSatuan(idx) {
-		if ($myTask[idx].mode === $taskMode[0]) {
+		if ($myTask[idx].sensorType === nodeType.NODE_TEMPERATURE) {
 			satuan = '°C';
-		} else if ($myTask[idx].mode === $taskMode[1]) {
+		} else if ($myTask[idx].sensorType === nodeType.NODE_CAPASITIVESOIL_SENSOR) {
 			satuan = '%';
-		} else if ($myTask[idx].mode === $taskMode[2]) {
+		} else if ($myTask[idx].sensorType === nodeType.NODE_HUMIDITY) {
 			satuan = '%';
-		} else if ($myTask[idx].mode === $taskMode[3]) {
+		} else if ($myTask[idx].sensorType === nodeType.NODE_ULTRASONIC_SENSOR) {
 			satuan = 'Cm';
-		} else if ($myTask[idx].mode === $taskMode[4]) {
+		} else if ($myTask[idx].sensorType === nodeType.NODE_FUEL_SENSOR) {
+			satuan = 'Cm';
+		} else {
 			satuan = '-';
 		}
 	}
@@ -206,6 +209,22 @@
 	}
 	function sensorSelect_click() {
 		dummyTask.sensorUse = sensorSelect + 1;
+		if ($mySensor[sensorSelect].sensorType === nodeType.NODE_CAPASITIVESOIL_SENSOR) {
+			minSpinner = 20;
+			maxSpinner = 100;
+			rangeValue[0] = 75;
+			rangeValue[1] = 80;
+		} else if ($mySensor[sensorSelect].sensorType === nodeType.NODE_ULTRASONIC_SENSOR) {
+			rangeValue[0] = -1;
+			rangeValue[1] = 5;
+			minSpinner = -15;
+			maxSpinner = 10;
+		} else {
+			minSpinner = 20;
+			maxSpinner = 100;
+			rangeValue[0] = 30;
+			rangeValue[1] = 32;
+		}
 	}
 
 	function setupClick() {
@@ -220,22 +239,23 @@
 		aktuator2Select = $myTask[viewIndex].aktuator2 - 1;
 		rangeValue[0] = $myTask[viewIndex].batasBawah;
 		rangeValue[1] = $myTask[viewIndex].batasAtas;
+		gantiSatuan(viewIndex)
 		//set
 
 		// sensorList = sensorTemperatureList
-		if ($myTask[viewIndex].mode === $taskMode[0]) {
+		if ($myTask[viewIndex].sensorType === nodeType.NODE_TEMPERATURE) {
 			sensorSelect = $myTask[viewIndex].sensorUse - 1;
-			minSpinner = 10;
+			minSpinner = 20;
 			maxSpinner = 100;
-		} else if ($myTask[viewIndex].mode === $taskMode[1]) {
+		} else if ($myTask[viewIndex].sensorType === nodeType.NODE_HUMIDITY) {
 			sensorSelect = $myTask[viewIndex].sensorUse - 1;
-			minSpinner = 10;
+			minSpinner = 20;
 			maxSpinner = 100;
-		} else if ($myTask[viewIndex].mode === $taskMode[2]) {
+		} else if ($myTask[viewIndex].sensorType === nodeType.NODE_CAPASITIVESOIL_SENSOR) {
 			sensorSelect = $myTask[viewIndex].sensorUse - 1;
-			minSpinner = 10;
+			minSpinner = 20;
 			maxSpinner = 100;
-		} else if ($myTask[viewIndex].mode === $taskMode[3]) {
+		} else if ($myTask[viewIndex].sensorType === nodeType.NODE_ULTRASONIC_SENSOR) {
 			sensorSelect = $myTask[viewIndex].sensorUse - 1;
 			minSpinner = -15;
 			maxSpinner = 10;
@@ -298,8 +318,8 @@
 	function simpanKontrolID() {
 		$kontrolID = inputID;
 		$settingModal = false;
-		$subMqtt = "abadinet-out/" + $kontrolID + "/#"
-		$pubMqtt = "abadinet-in/" + $kontrolID + "/"
+		$subMqtt = 'abadinet-out/' + $kontrolID + '/#';
+		$pubMqtt = 'abadinet-in/' + $kontrolID + '/';
 	}
 
 	function simpanSetup() {}
@@ -307,7 +327,13 @@
 		if (displaySelect > $myTask.length) {
 			alert('kontrol tidak ditemukan');
 		} else {
-			let display_msg = String(displaySelect) + ',' + String(displayModeSelect) + ',30,80,' + String(displayBrignest) + ',-,';
+			let display_msg =
+				String(displaySelect) +
+				',' +
+				String(displayModeSelect) +
+				',30,80,' +
+				String(displayBrignest) +
+				',-,';
 			kirimMsg(msgType.KONTROL, 0, 'setDisplay', display_msg);
 			console.log('update display ' + display_msg);
 		}
@@ -344,14 +370,13 @@
 	function clearHistoryClick() {
 		kirimMsg(msgType.TASK, viewIndex, 'clearHistory', '0');
 	}
-	function simpanNetwork(){
-		if(wifiSSID && wifiPASS){
-			const netParam = "newNetwok," + wifiSSID + ',' + wifiPASS + ',updateNetwork'
+	function simpanNetwork() {
+		if (wifiSSID && wifiPASS) {
+			const netParam = 'newNetwok,' + wifiSSID + ',' + wifiPASS + ',updateNetwork';
 			kirimMsg(msgType.KONTROL, 0, 'updateNetwork', netParam);
-		}else{
-			alert('!!!Nama wifi dan password harus diisi!!!')
+		} else {
+			alert('!!!Nama wifi dan password harus diisi!!!');
 		}
-		
 	}
 </script>
 
@@ -428,15 +453,17 @@
 				<button
 					onclick={() => loginClick()}
 					color="blue"
-					class="col-span-2 h-10 w-full rounded-lg border border-blue-700 bg-blue-600 text-white"
+					class="col-span-3 h-10 w-full rounded-lg border border-blue-700 bg-blue-600 text-white"
 				>
 					{#if $loginWait}
 						<Spinner class="me-3" bg="white" size="5" color="yellow" />
 					{/if}Login
 				</button>
+				<!--
 				<button color="blue" class="h-10 w-full rounded-lg border" onclick={() => localLogin()}
 					>Local
 				</button>
+			-->
 				<button
 					onclick={() => setKontroIdClick()}
 					class="col-span-3 text-right text-sm text-blue-800">Set kontrollerId</button
@@ -455,6 +482,7 @@
 	<Tabs tabStyle="underline">
 		<TabItem open title="Setup">
 			<div class="mx-auto grid max-w-sm grid-cols-2 gap-2">
+				<!--
 				<div class="col-span-2">
 					<label for="pilihMode" class="mb-1 block text-xs dark:text-white">Pilih Mode</label>
 					<select
@@ -468,8 +496,9 @@
 						{/each}
 					</select>
 				</div>
+			-->
 
-				<div class="col-span-2">
+				<div class="col-span-2 mb-4">
 					<label for="NamaTask" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
 						>Nama</label
 					>
@@ -483,7 +512,7 @@
 					/>
 				</div>
 
-				<div>
+				<div class="mb-4">
 					<label for="small1" class="mb-1 block text-xs dark:text-white">Pilih Aktuator1</label>
 					<select
 						bind:value={aktuator1Select}
@@ -492,11 +521,11 @@
 						class="mb-1 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
 					>
 						{#each $myAktuator as aktuator, idx}
-							<option value={idx}>Aktuator({aktuator.nodeId}-{aktuator.nomerAktuator})</option>
+							<option value={idx}>Aktuator({aktuator.nodeId}-{aktuator.nomerAktuator - 6})</option>
 						{/each}
 					</select>
 				</div>
-				<div>
+				<div class="mb-4">
 					<label for="small2" class="mb-1 block text-xs">Pilih Aktuator2</label>
 					<select
 						bind:value={aktuator2Select}
@@ -505,31 +534,31 @@
 						class="mb-1 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
 					>
 						{#each $myAktuator as aktuator, idx}
-							<option value={idx}>Aktuator({aktuator.nodeId}-{aktuator.nomerAktuator})</option>
+							<option value={idx}>Aktuator({aktuator.nodeId}-{aktuator.nomerAktuator - 6})</option>
 						{/each}
 					</select>
 				</div>
 				<Label class="text-xs"
 					>Pilih Sensor
 					<Select bind:value={sensorSelect} onchange={() => sensorSelect_click()} class="text-sm">
-						
-							{#each $mySensor as sensor, idx}
-								<option value={idx}>Sensor Temperature {idx + 1} ({sensor.nodeId}) </option>
-							{/each}
-						
+						{#each $mySensor as sensor, idx}
+							<option value={idx}
+								>Sensor {$sensorListTxt[sensor.sensorType]} {idx + 1} ({sensor.nodeId})
+							</option>
+						{/each}
 					</Select>
 				</Label>
 
 				<Label class="text-xs"
 					>Sensor Interval {intervalSelected} Menit
-					<RangeSlider min={5} max={60} bind:value={intervalSelected} />
+					<RangeSlider min={5} max={90} bind:value={intervalSelected} />
 				</Label>
 			</div>
 
 			<div class="my-0"></div>
-			<div class="mt-2 rounded-sm border border-gray-200 dark:border-gray-700">
+			<div class="m-4 mt-4 rounded-sm border border-gray-200 dark:border-gray-700">
 				<div class="mt-2 grid grid-cols-2 justify-items-center">
-					{#if $myTask[viewIndex].mode === $taskMode[0]}
+					{#if $myTask[viewIndex].sensorType === nodeType.NODE_HUMIDITY}
 						<div>OFF({rangeValue[0]})</div>
 						<div>ON({rangeValue[1]})</div>
 					{:else}
@@ -560,7 +589,7 @@
 						<button class="textsm col-span-2 ml-2 text-left font-bold"
 							>Aktuator{idx + 1}
 							<div class="text-xs font-normal">
-								NodeId: {aktuator.nodeId} Aktuator: {aktuator.nomerAktuator}
+								NodeId: {aktuator.nodeId} Aktuator: {aktuator.nomerAktuator - 6}
 							</div></button
 						>
 						<button class="text-sm font-bold"
@@ -579,24 +608,25 @@
 				{#each $mySensor as sensor, idx}
 					<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
 						<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
-							><div class="ml-2 mt-2 font-bold">SensorTemperature{idx + 1}</div>
+							><div class="ml-2 mt-2 font-bold">
+								{idx + 1}.Sensor {$sensorListTxt[sensor.sensorType]}
+							</div>
 							<div class="ml-2 text-xs font-normal">
 								NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
 							</div></button
 						>
-						<button class="bg-gray-200 text-center font-bold">{sensor.val}%</button>
+						<button class="bg-gray-200 text-center font-bold">{sensor.val} {satuan}</button>
 
 						<div class="ml-2 mt-2 text-xs">Snr:{sensor.snr}</div>
 						<div class="mt-2 text-xs">Rssi:{sensor.rssi}</div>
 						<div class="mt-2 text-xs">val:{sensor.rawVal}</div>
 
 						<div class="col-span-3 my-2 ml-2 text-xs">
-							lastSeen:{sensor.lastSeen}
+							lastSeen:{unixToLocalString(sensor.lastSeen)}
 						</div>
 					</div>
 				{/each}
 				<hr class="mb-4" />
-				
 			</div>
 		</TabItem>
 		<TabItem title="History">
@@ -608,13 +638,12 @@
 			</div>
 			<div class="no-scrollbar mt-4 h-full w-full overflow-auto text-xs">
 				{#if $logHistory}
-				{#each $logHistory as history,idx }
-					<div>{idx + 1}.{history}</div>
-				{/each}
+					{#each $logHistory as history, idx}
+						<div>{idx + 1}.{history}</div>
+					{/each}
 				{:else}
-				History tidak ditemukan....
+					History tidak ditemukan....
 				{/if}
-				
 			</div>
 		</TabItem>
 	</Tabs>
@@ -670,7 +699,7 @@
 					</div>
 				{/if}
 
-				<div class="col-span-2 grid h-40 w-full grid-cols-2 gap-4 rounded border p-2">
+				<div class="h-50 col-span-2 grid w-full grid-cols-2 gap-4 rounded border p-2">
 					<div>
 						<label for="disp1" class="mb-1 block text-xs dark:text-white">Display</label>
 						<select
@@ -697,15 +726,15 @@
 					</div>
 					<div class="col-span-2">
 						<Label class="text-xs"
-					>Kecerahan {displayBrignest}
-					<RangeSlider min={20} max={80} bind:value={displayBrignest} />
-				</Label>
-						
+							>Kecerahan {displayBrignest}
+							<RangeSlider min={20} max={80} bind:value={displayBrignest} />
+						</Label>
 					</div>
 					<Button onclick={() => updateDisplayClick()} class="col-span-2 h-10"
 						>Update Display</Button
 					>
 				</div>
+				<!--
 				<div class="center col-span-2 h-12 w-full rounded border px-8 py-2">
 					<Toggle bind:checked={$demoVal} onchange={() => demoChange()}
 						>Demo
@@ -714,6 +743,7 @@
 						{/if}
 					</Toggle>
 				</div>
+			-->
 			</div>
 		</div>
 	{:else}
