@@ -55,6 +55,31 @@
 	import { goto } from '$app/navigation';
 	import { notifier } from '@beyonk/svelte-notifications';
 
+	import ChartComponent from '$lib/ChartComponent.svelte';
+	import {
+		Chart as ChartJS,
+		Title,
+		Tooltip,
+		Legend,
+		LineElement,
+		LinearScale,
+		PointElement,
+		CategoryScale
+	} from 'chart.js';
+
+	// --- STATE REAKTIF SVELTE ---
+	let chartData = $state(null);	
+	let isLoading = $state(false);
+	let error = $state(null);
+	let channelName = 'ThingSpeak Channel';
+	let fieldName = 'Data Field';
+
+	// --- KONSTANTA API THINGSPEAK ---
+	const CHANNEL_ID = 3158850; // Ganti dengan ID Channel Anda
+	const FIELD_NUMBER = 1;
+	const READ_API_KEY = ''; // Ganti jika Channel Anda privat
+	const RESULTS_LIMIT = 140;
+
 	let viewIndex = $state(0);
 	let defaultModal = $state(false);
 	let modeSelect = $state(0);
@@ -239,7 +264,7 @@
 		aktuator2Select = $myTask[viewIndex].aktuator2 - 1;
 		rangeValue[0] = $myTask[viewIndex].batasBawah;
 		rangeValue[1] = $myTask[viewIndex].batasAtas;
-		gantiSatuan(viewIndex)
+		gantiSatuan(viewIndex);
 		//set
 
 		// sensorList = sensorTemperatureList
@@ -365,7 +390,8 @@
 	}
 
 	function refreshHistoryClick() {
-		kirimMsg(msgType.TASK, viewIndex, 'getHistory', '0');
+		//kirimMsg(msgType.TASK, viewIndex, 'getHistory', '0');
+		fetchData();
 	}
 	function clearHistoryClick() {
 		kirimMsg(msgType.TASK, viewIndex, 'clearHistory', '0');
@@ -378,6 +404,77 @@
 			alert('!!!Nama wifi dan password harus diisi!!!');
 		}
 	}
+
+	async function fetchData() {
+		isLoading = true;
+		error = null;
+		chartData = null;
+
+		let url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS_LIMIT}`;
+		if (READ_API_KEY) {
+			url += `&api_key=${READ_API_KEY}`;
+		}
+
+		try {
+			const response = await fetch(url);
+
+			if (!response.ok) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			const data = await response.json();
+			console.log(JSON.stringify(data))
+
+			// 1. Ambil nama channel dan field
+			channelName = data.channel.name || `Channel ${CHANNEL_ID}`;
+			fieldName = data.channel[`field${FIELD_NUMBER}`] || `Field ${FIELD_NUMBER}`;
+
+			// 2. Proses data untuk Chart.js
+			const processedData = data.feeds
+				.map((feed) => ({
+					label: new Date(feed.created_at).toLocaleTimeString('id-ID', {
+						hour: '2-digit',
+						minute: '2-digit',
+						second: '2-digit'
+					}),
+					value: parseFloat(feed[`field${FIELD_NUMBER}`])
+				}))
+				.filter((item) => !isNaN(item.value));
+
+			// 3. Atur state chartData
+			chartData = {
+				labels: processedData.map((item) => item.label),
+				datasets: [
+					{
+						label: fieldName,
+						data: processedData.map((item) => item.value),
+						borderColor: 'rgb(255, 159, 64)', // Warna Garis (misal, Oranye)
+            			backgroundColor: 'rgba(255, 159, 64, 0.2)', // Warna latar titik
+						tension: 0.4,
+						fill: false
+					}
+				]
+			};
+		} catch (err) {
+			console.error('Gagal mengambil data dari ThingSpeak:', err);
+			error = 'Gagal memuat data ThingSpeak. Periksa koneksi atau API Key/ID.';
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	// --- OPSI GRAFIK ---
+	const options = {
+		responsive: true,
+		plugins: {
+			legend: { position: 'top' },
+			title: { display: true, text: 'Sensor History' }
+		},
+		scales: {
+			x: { title: { display: true, text: 'Waktu (Entry Terbaru di Kanan)' }, reverse: false },
+			y: { title: { display: true, text: 'Ketinggan(cm)' },min: -15, max: 15 ,ticks: { stepSize: 5,autoSkip: false } }
+		}
+	};
 </script>
 
 {#if $isLogin}
@@ -637,12 +734,11 @@
 				<button onclick={() => clearHistoryClick()}><TrashBinSolid /></button>
 			</div>
 			<div class="no-scrollbar mt-4 h-full w-full overflow-auto text-xs">
-				{#if $logHistory}
-					{#each $logHistory as history, idx}
-						<div>{idx + 1}.{history}</div>
-					{/each}
-				{:else}
-					History tidak ditemukan....
+				{#if chartData}
+					<div style="width: 100%; max-width: 800px; margin: 20px auto;">
+						<ChartComponent type="line" data={chartData} {options} />
+					</div>
+					<p>Menampilkan **{chartData.datasets[0].data.length}** entri data terakhir.</p>
 				{/if}
 			</div>
 		</TabItem>
