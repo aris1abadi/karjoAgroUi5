@@ -248,7 +248,9 @@ export function cekIncomingMsg(topic: string, msg: string) {
         }
 
       }else if(cmd === 'sensorVal'){
-        const newMsg = JSON.parse(payload)       
+        const newMsg = JSON.parse(payload)   
+        //update mySensor    
+        
 
         myTask.update(task => {
           task[idx] = { ...task[idx], sensorVal: newMsg.sensorVal,lastSeen:newMsg.lastSeen };

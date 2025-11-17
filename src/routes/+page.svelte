@@ -26,7 +26,8 @@
 		subMqtt,
 		pubMqtt,
 		nodeType,
-		sensorListTxt
+		sensorListTxt,
+		helpModal
 	} from '$lib/stores';
 	import { unixToLocalString } from '$lib/utils';
 	import {
@@ -40,35 +41,36 @@
 		Tabs,
 		TabItem,
 		Toggle,
-		Select
+		Select,
+		AccordionItem,
+		Accordion,
+		Li,
+		List,
+		Heading,
+		Span,
+		Img
 	} from 'flowbite-svelte';
-	import {
-		ArrowRightOutline,
-		ArrowLeftOutline,
-		AngleLeftOutline,
-		AngleRightOutline,
-		RefreshOutline,
-		TrashBinSolid
-	} from 'flowbite-svelte-icons';
+	import { ArrowRightOutline, ArrowLeftOutline, RefreshOutline } from 'flowbite-svelte-icons';
 	import RangeSlider from 'svelte-range-slider-pips';
 	import { bleConnect, bleDisconnect } from '$lib/bleClient';
 	import { goto } from '$app/navigation';
 	import { notifier } from '@beyonk/svelte-notifications';
 
 	import ChartComponent from '$lib/ChartComponent.svelte';
-	import {
-		Chart as ChartJS,
-		Title,
-		Tooltip,
-		Legend,
-		LineElement,
-		LinearScale,
-		PointElement,
-		CategoryScale
-	} from 'chart.js';
+
+	let swiperEl = $state();
+	let swiper;
+
+	const pages = [
+		{ title: 'Login', text: 'Ringkasan ...', img: '/btoff.png' },
+		{ title: 'Pengaturan', text: 'Pengaturan ...', img: '/cloud.jpeg' },
+		{ title: 'Monitoring', text: 'Monitoring ...', img: '/endpin2.png' },
+		{ title: 'Kontrol', text: 'Kontrol ...', img: '/home.png' }
+	];
 
 	// --- STATE REAKTIF SVELTE ---
-	let chartData = $state(null);	
+	let rawChartData = $state(null);
+	let chartData = $state(null);
 	let isLoading = $state(false);
 	let error = $state(null);
 	let channelName = 'ThingSpeak Channel';
@@ -78,7 +80,7 @@
 	const CHANNEL_ID = 3158850; // Ganti dengan ID Channel Anda
 	const FIELD_NUMBER = 1;
 	const READ_API_KEY = ''; // Ganti jika Channel Anda privat
-	const RESULTS_LIMIT = 140;
+	const RESULTS_LIMIT = 100;
 
 	let viewIndex = $state(0);
 	let defaultModal = $state(false);
@@ -88,6 +90,8 @@
 	let aktuator2Select = $state(0);
 	let sensorSelect = $state(0);
 	let sensorSelectList = $state(0);
+
+	let slide = $state(0);
 
 	const channelList = [
 		{ value: 0, name: 'CH1 920Mhz' },
@@ -137,7 +141,17 @@
 
 	let setupTitle = $state('setup ');
 	//let loginWait = false
-	onMount(() => {});
+	onMount(() => {
+		import('swiper/bundle').then(({ default: Swiper }) => {
+			new Swiper(swiperEl, {
+				slidesPerView: 1,
+				spaceBetween: 20,
+				pagination: { el: '.swiper-pagination', clickable: true },
+				navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+				keyboard: { enabled: true }
+			});
+		});
+	});
 
 	function gantiSatuan(idx) {
 		if ($myTask[idx].sensorType === nodeType.NODE_TEMPERATURE) {
@@ -409,6 +423,7 @@
 		isLoading = true;
 		error = null;
 		chartData = null;
+		rawChartData = null;
 
 		let url = `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds.json?results=${RESULTS_LIMIT}`;
 		if (READ_API_KEY) {
@@ -423,7 +438,7 @@
 			}
 
 			const data = await response.json();
-			console.log(JSON.stringify(data))
+			console.log(JSON.stringify(data));
 
 			// 1. Ambil nama channel dan field
 			channelName = data.channel.name || `Channel ${CHANNEL_ID}`;
@@ -434,14 +449,21 @@
 				.map((feed) => ({
 					label: new Date(feed.created_at).toLocaleTimeString('id-ID', {
 						hour: '2-digit',
+						minute: '2-digit'
+						//second: '2-digit'
+					}),
+					value: parseFloat(feed[`field${FIELD_NUMBER}`]),
+					fullTime: new Date(feed.created_at).toLocaleDateString('id-ID', {
+						year: 'numeric',
+						month: 'long',
+						day: 'numeric',
+						hour: '2-digit',
 						minute: '2-digit',
 						second: '2-digit'
-					}),
-					value: parseFloat(feed[`field${FIELD_NUMBER}`])
+					})
 				}))
 				.filter((item) => !isNaN(item.value));
-
-			// 3. Atur state chartData
+			rawChartData = processedData; // <--- SIMPAN DATA LENGKAP DI SINI
 			chartData = {
 				labels: processedData.map((item) => item.label),
 				datasets: [
@@ -449,7 +471,7 @@
 						label: fieldName,
 						data: processedData.map((item) => item.value),
 						borderColor: 'rgb(255, 159, 64)', // Warna Garis (misal, Oranye)
-            			backgroundColor: 'rgba(255, 159, 64, 0.2)', // Warna latar titik
+						backgroundColor: 'rgba(255, 159, 64, 0.2)', // Warna latar titik
 						tension: 0.4,
 						fill: false
 					}
@@ -468,11 +490,59 @@
 		responsive: true,
 		plugins: {
 			legend: { position: 'top' },
-			title: { display: true, text: 'Sensor History' }
+			title: { display: true, text: 'Sensor History' },
+			tooltip: {
+				// Konfigurasi Tooltip
+				callbacks: {
+					// 1. Label Utama (Menampilkan Judul Dataset)
+					title: function (context) {
+						// Gunakan dataIndex untuk mengambil data lengkap dari state Svelte
+						const dataIndex = context[0].dataIndex;
+
+						// Cek apakah rawChartData sudah terisi
+						if (rawChartData && rawChartData[dataIndex]) {
+							// Akses properti fullTime dari array state Svelte
+							return `${rawChartData[dataIndex].fullTime}`;
+						}
+						return 'Memuat Waktu...';
+					},
+
+					// 2. Nilai (Menampilkan Nilai Y)
+					label: function (context) {
+						let label = context.dataset.label || '';
+
+						if (label) {
+							label += ': ';
+						}
+						if (context.parsed.y !== null) {
+							label += new Intl.NumberFormat('id-ID').format(context.parsed.y);
+						}
+						return label;
+					}
+				}
+			}
 		},
+
 		scales: {
-			x: { title: { display: true, text: 'Waktu (Entry Terbaru di Kanan)' }, reverse: false },
-			y: { title: { display: true, text: 'Ketinggan(cm)' },min: -15, max: 15 ,ticks: { stepSize: 5,autoSkip: false } }
+			x: {
+				display: true,
+				title: { display: false, text: 'Waktu (Entry Terbaru di Kanan)' },
+				ticks: {
+					// ==================================
+					// PENTING: TAMBAHKAN INI
+					// ==================================
+					maxTicksLimit: 5 // <--- Membatasi label tick yang ditampilkan menjadi maksimal 5
+					// autoSkip: true, // Nilai default, memastikan hanya 5 yang ditampilkan
+				},
+				reverse: false
+			},
+			y: {
+				title: { display: false, text: 'Ketinggan(cm)' },
+
+				min: -15,
+				max: 15,
+				ticks: { stepSize: 5, autoSkip: false }
+			}
 		}
 	};
 </script>
@@ -556,17 +626,21 @@
 						<Spinner class="me-3" bg="white" size="5" color="yellow" />
 					{/if}Login
 				</button>
-				<!--
-				<button color="blue" class="h-10 w-full rounded-lg border" onclick={() => localLogin()}
-					>Local
-				</button>
-			-->
+
 				<button
 					onclick={() => setKontroIdClick()}
 					class="col-span-3 text-right text-sm text-blue-800">Set kontrollerId</button
 				>
 			</div>
 		</div>
+		<button
+			class="mt-16"
+			onclick={() => {
+				$helpModal = true;
+			}}
+		>
+			<img class="h-8 w-8" src="/help.png" alt="Help" />
+		</button>
 	</div>
 {/if}
 
@@ -703,25 +777,27 @@
 		<TabItem title="Sensor">
 			<div class="no-scrollbar h-full w-full overflow-auto">
 				{#each $mySensor as sensor, idx}
-					<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
-						<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
-							><div class="ml-2 mt-2 font-bold">
-								{idx + 1}.Sensor {$sensorListTxt[sensor.sensorType]}
+					{#if sensor.sensorType != nodeType.NODE_TEMPERATURE && sensor.sensorType != nodeType.NODE_HUMIDITY}
+						<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
+							<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
+								><div class="ml-2 mt-2 font-bold">
+									Sensor {$sensorListTxt[sensor.sensorType]}
+								</div>
+								<div class="ml-2 text-xs font-normal">
+									NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
+								</div></button
+							>
+							<button class="bg-gray-200 text-center font-bold">{sensor.val} {satuan}</button>
+
+							<div class="ml-2 mt-2 text-xs">Snr:{sensor.snr}</div>
+							<div class="mt-2 text-xs">Rssi:{sensor.rssi}</div>
+							<div class="mt-2 text-xs">val:{sensor.rawVal}</div>
+
+							<div class="col-span-3 my-2 ml-2 text-xs">
+								lastSeen:{unixToLocalString(sensor.lastSeen)}
 							</div>
-							<div class="ml-2 text-xs font-normal">
-								NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
-							</div></button
-						>
-						<button class="bg-gray-200 text-center font-bold">{sensor.val} {satuan}</button>
-
-						<div class="ml-2 mt-2 text-xs">Snr:{sensor.snr}</div>
-						<div class="mt-2 text-xs">Rssi:{sensor.rssi}</div>
-						<div class="mt-2 text-xs">val:{sensor.rawVal}</div>
-
-						<div class="col-span-3 my-2 ml-2 text-xs">
-							lastSeen:{unixToLocalString(sensor.lastSeen)}
 						</div>
-					</div>
+					{/if}
 				{/each}
 				<hr class="mb-4" />
 			</div>
@@ -731,16 +807,11 @@
 				<button onclick={() => refreshHistoryClick()}
 					><RefreshOutline class="h-6 w-6 shrink-0" /></button
 				>
-				<button onclick={() => clearHistoryClick()}><TrashBinSolid /></button>
 			</div>
-			<div class="no-scrollbar mt-4 h-full w-full overflow-auto text-xs">
-				{#if chartData}
-					<div style="width: 100%; max-width: 800px; margin: 20px auto;">
-						<ChartComponent type="line" data={chartData} {options} />
-					</div>
-					<p>Menampilkan **{chartData.datasets[0].data.length}** entri data terakhir.</p>
-				{/if}
-			</div>
+
+			{#if chartData}
+				<ChartComponent type="line" data={chartData} {options} />
+			{/if}
 		</TabItem>
 	</Tabs>
 </Modal>
@@ -855,4 +926,110 @@
 			<div class="col-span-2"></div>
 		</div>
 	{/if}
+</Modal>
+
+<Modal class="h-180 w-screen" title="Petunjuk Penggunaan" bind:open={$helpModal}>
+	<Accordion>
+		<AccordionItem>
+			{#snippet header()}Penggunaan Aplikasi{/snippet}
+			<div class="grid grid-cols-2 gap-4">
+				<Img src="/login.jpg" alt="login Image" class="w-full" />
+				<div>
+					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
+						>Halaman Login</Heading
+					>
+					<List tag="ol" class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+						<Li>Informasi kontroller yang terhubung dengan Aplikasi ini</Li>
+						<Li>Status koneksi</Li>
+						<Li>Input Password</Li>
+						<Li>Button untuk Login</Li>
+						<Li>Tekan Set kontrolId untuk menghubungkan aplikasi dengan konmtroller yang sesuai</Li>
+					</List>
+				</div>
+			</div>
+			<hr class="my-4"/>
+			<div class="grid grid-cols-2 gap-4">
+				<Img src="/task.jpg" alt="login Image" class="w-full" />
+				<div>
+					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
+						>Halaman Fungsi</Heading
+					>
+					<List tag="ol" class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+						<Li>Nama Fungsi,click 2 x untuk menu Setup,Ini akan berwarna Hijau jika Fungsi berjalan otomatis dengan sensor dan berwarna merah jika otomatis nya tidak aktif</Li>
+						<Li>Button untuk menyalakan/Mematikan Pompa</Li>
+						<Li>Pilihan untuk menyalakan Pompa secara otomatis Berdasar sensor </Li>
+						<Li>Infoprmasi Pompa ON dan OFF berdasar sensor</Li>
+					</List>
+				</div>
+			</div>
+			<hr class="my-4"/>
+
+			<div class="grid grid-cols-2 gap-4">
+				<Img src="/setup.jpg" alt="login Image" class="w-full" />
+				<div>
+					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
+						>Halaman Setup</Heading
+					>
+					<List tag="ol" class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+						<Li>Plihan unutk melihat status Setup,Aktuator,Sensor,History </Li>
+						<Li>Untuk mengganti nama </Li>
+						<Li>Untuk pilih Pompa/Aktuator,ada 2 aktuator yang bisa dipakai</Li>
+						<Li>Pilih sensor</Li>
+						<Li>Waktu Interval Sensor yang dipilih unutk kirim data</Li> 
+						<Li>Tentukan Waktu ON dan OFF Pompa/Aktuator ,jika fungsi diset otomatis</Li>
+						<Li>Simpan Perubahan</Li>
+					</List>
+				</div>
+			</div>
+
+			<hr class="my-4"/>
+
+			<div class="grid grid-cols-2 gap-4">
+				<Img src="/history1.jpg" alt="login Image" class="w-full" />
+				<div>
+					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
+						>Halaman History sensor</Heading
+					>
+					<List tag="ol" class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+						<Li>Pada halaman Setup ,pilih History, akan muncul halaman in</Li>
+						<Li>Pilih refresh data, maka data grafik dari sensor akan muncul(menampilkan 100 log history)</Li>
+						<Li>Data Sensor</Li>
+					</List>
+				</div>
+				<Img src="/history2.jpg" alt="login Image" class="w-full" />
+			</div>
+
+
+		</AccordionItem>
+		<AccordionItem>
+			{#snippet header()}Pemasangan Kontrol/Sensor{/snippet}
+			<p class="mb-2 text-gray-500 dark:text-gray-400">
+				Lorem ipsum dolor sit amet, consectetur adipisicing elit. Illo ab necessitatibus sint
+				explicabo ...
+			</p>
+			<p class="mb-2 text-gray-500 dark:text-gray-400">
+				Lorem ipsum dolor sit amet, consectetur adipisicing elit. Illo ab necessitatibus sint
+				explicabo ...
+			</p>
+			<p class="mb-2 text-gray-500 dark:text-gray-400">Learn more about these technologies:</p>
+			<ul class="list-disc ps-5 text-gray-500 dark:text-gray-400">
+				<li>
+					<a
+						href="/"
+						target="_blank"
+						rel="noreferrer"
+						class="text-blue-600 hover:underline dark:text-blue-500">Lorem ipsum</a
+					>
+				</li>
+				<li>
+					<a
+						href="https://tailwindui.com/"
+						rel="noreferrer"
+						target="_blank"
+						class="text-blue-600 hover:underline dark:text-blue-500">Tailwind UI</a
+					>
+				</li>
+			</ul>
+		</AccordionItem>
+	</Accordion>
 </Modal>

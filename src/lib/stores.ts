@@ -24,6 +24,7 @@ export const isTaskEnable = writable(false)
 export const taskChangeWait = writable(false)
 export const settingModal = writable(false);
 export const settingTitle = writable('Settings')
+export const helpModal = writable(false)
 
 export const logHistory = writable([]);
 
