@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { loginStart, kirimMsg, mqttDisconnect } from '$lib/mqttClient';
+	import DownloadThingSpeak from '$lib/DownloadThingSpeak.svelte';
 	//import QRCode from 'qrcode';
 	import {
 		taskMode,
@@ -66,7 +67,6 @@
 
 	let swiperEl = $state();
 	let swiper;
-
 
 	// --- STATE REAKTIF SVELTE ---
 	let rawChartData = $state(null);
@@ -771,7 +771,7 @@
 					<Button color="green" onclick={() => simpanTask()}>Simpan</Button>
 				</div>
 			</TabItem>
-			<TabItem titl="Aktuator">
+			<TabItem title="Aktuator">
 				<div class="h-full w-full overflow-auto">
 					{#each $myAktuator as aktuator, idx}
 						<div class="mb-4 grid h-16 w-full grid-cols-3 rounded border p-2">
@@ -820,22 +820,23 @@
 					<hr class="mb-4" />
 				</div>
 			</TabItem>
-			<TabItem title="History"></TabItem>
+			
 		</Tabs>
 	{:else if $setupMode === modalMode.SENSOR_DATA}
-		<div class="grid grid-cols-2 h-8">
-			<button class="center w-full" onclick={() => refreshHistoryClick()}
-				><RefreshOutline class="ml-16 h-6 w-6 shrink-0" />
-				<div>Refresh</div></button
+		<div class="grid h-8 grid-cols-2">
+			<div></div>
+			<button class="flex w-full justify-center" onclick={() => refreshHistoryClick()}
+				><RefreshOutline class="center h-6 w-6 shrink-0" />Refresh</button
 			>
-			<button onclick={() => downloadAll()} class="rounded bg-blue-600 px-4 py-2 text-white">
-				<DownloadSolid class="h-6 w-6" /> Download
-			</button>
 		</div>
 
 		{#if chartData}
 			<ChartComponent type="line" data={chartData} {options} />
+		{:else}
+			<div class="h-40 text-center">Sensor chart</div>
 		{/if}
+
+		<DownloadThingSpeak channelId="3158850" apiKey="7I8VJB9Z4UMHRSMM" />
 	{:else if $setupMode === modalMode.ALERT}
 		<div>Alert</div>
 	{/if}
