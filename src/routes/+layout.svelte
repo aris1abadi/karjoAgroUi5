@@ -85,9 +85,7 @@
 			classes={{ inner: 'grid-cols-3' }}
 			style="background-color: rgba(255, 255, 255, 0.4);"
 		>
-			<BottomNavItem btnName="Home" href="/">
-				<HomeSolid />
-			</BottomNavItem>
+			<div></div>
 			<BottomNavItem btnName="Setup" onclick={settingClick}>
 				<AdjustmentsVerticalOutline />
 			</BottomNavItem>

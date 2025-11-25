@@ -32,6 +32,12 @@ export const kontrolID = persisted('kontrolID', 'KA-8CE9')
 export const bleDeviceId = persisted('bleDeviceId', '')
 export const subMqtt = writable("abadinet-out/" + get(kontrolID) + "/#");
 export const pubMqtt = writable("abadinet-in/" + get(kontrolID) + "/");
+
+export const modalMode={
+  SETUP_TASK:0,
+  SENSOR_DATA:1, 
+  ALERT:2, 
+}
 export const msgType = {
   KONTROL: 0,
   TASK: 1,
@@ -44,6 +50,7 @@ export const connectionType = {
   MQTT: 2,
   LOCAL_WEB: 3,
 };
+export const setupMode = writable(modalMode.SETUP_TASK)
 
 export const sensorListTxt = readable(['Gateway','Temperature','Humidity','Intermittent','Intermittent','Moisture','Probe'])
 /*

@@ -27,7 +27,9 @@
 		pubMqtt,
 		nodeType,
 		sensorListTxt,
-		helpModal
+		helpModal,
+		setupMode,
+		modalMode
 	} from '$lib/stores';
 	import { unixToLocalString } from '$lib/utils';
 	import {
@@ -50,10 +52,14 @@
 		Span,
 		Img
 	} from 'flowbite-svelte';
-	import { ArrowRightOutline, ArrowLeftOutline, RefreshOutline } from 'flowbite-svelte-icons';
+	import {
+		ArrowRightOutline,
+		ArrowLeftOutline,
+		RefreshOutline,
+		DownloadSolid
+	} from 'flowbite-svelte-icons';
 	import RangeSlider from 'svelte-range-slider-pips';
-	import { bleConnect, bleDisconnect } from '$lib/bleClient';
-	import { goto } from '$app/navigation';
+
 	import { notifier } from '@beyonk/svelte-notifications';
 
 	import ChartComponent from '$lib/ChartComponent.svelte';
@@ -79,8 +85,8 @@
 	// --- KONSTANTA API THINGSPEAK ---
 	const CHANNEL_ID = 3158850; // Ganti dengan ID Channel Anda
 	const FIELD_NUMBER = 1;
-	const READ_API_KEY = ''; // Ganti jika Channel Anda privat
-	const RESULTS_LIMIT = 100;
+	const READ_API_KEY = '7I8VJB9Z4UMHRSMM'; // Ganti jika Channel Anda privat
+	const RESULTS_LIMIT = 50;
 
 	let viewIndex = $state(0);
 	let defaultModal = $state(false);
@@ -266,38 +272,44 @@
 		}
 	}
 
-	function setupClick() {
+	function setupClick(mode) {
 		defaultModal = true;
-		dummyTask = $myTask[viewIndex];
-		setupTitle = 'Setup ' + $myTask[viewIndex].nama;
-		modeSelect = $myTask[viewIndex].mode;
-		namaSelect = $myTask[viewIndex].nama;
-		sensorSelectList = $myTask[viewIndex].mode;
-		intervalSelected = $myTask[viewIndex].sensorInterval;
-		aktuator1Select = $myTask[viewIndex].aktuator1 - 1;
-		aktuator2Select = $myTask[viewIndex].aktuator2 - 1;
-		rangeValue[0] = $myTask[viewIndex].batasBawah;
-		rangeValue[1] = $myTask[viewIndex].batasAtas;
-		gantiSatuan(viewIndex);
-		//set
+		if (mode === modalMode.SETUP_TASK) {
+			$setupMode = modalMode.SETUP_TASK;
+			dummyTask = $myTask[viewIndex];
+			setupTitle = 'Setup ' + $myTask[viewIndex].nama;
+			modeSelect = $myTask[viewIndex].mode;
+			namaSelect = $myTask[viewIndex].nama;
+			sensorSelectList = $myTask[viewIndex].mode;
+			intervalSelected = $myTask[viewIndex].sensorInterval;
+			aktuator1Select = $myTask[viewIndex].aktuator1 - 1;
+			aktuator2Select = $myTask[viewIndex].aktuator2 - 1;
+			rangeValue[0] = $myTask[viewIndex].batasBawah;
+			rangeValue[1] = $myTask[viewIndex].batasAtas;
+			gantiSatuan(viewIndex);
+			//set
 
-		// sensorList = sensorTemperatureList
-		if ($myTask[viewIndex].sensorType === nodeType.NODE_TEMPERATURE) {
-			sensorSelect = $myTask[viewIndex].sensorUse - 1;
-			minSpinner = 20;
-			maxSpinner = 100;
-		} else if ($myTask[viewIndex].sensorType === nodeType.NODE_HUMIDITY) {
-			sensorSelect = $myTask[viewIndex].sensorUse - 1;
-			minSpinner = 20;
-			maxSpinner = 100;
-		} else if ($myTask[viewIndex].sensorType === nodeType.NODE_CAPASITIVESOIL_SENSOR) {
-			sensorSelect = $myTask[viewIndex].sensorUse - 1;
-			minSpinner = 20;
-			maxSpinner = 100;
-		} else if ($myTask[viewIndex].sensorType === nodeType.NODE_ULTRASONIC_SENSOR) {
-			sensorSelect = $myTask[viewIndex].sensorUse - 1;
-			minSpinner = -15;
-			maxSpinner = 10;
+			// sensorList = sensorTemperatureList
+			if ($myTask[viewIndex].sensorType === nodeType.NODE_TEMPERATURE) {
+				sensorSelect = $myTask[viewIndex].sensorUse - 1;
+				minSpinner = 20;
+				maxSpinner = 100;
+			} else if ($myTask[viewIndex].sensorType === nodeType.NODE_HUMIDITY) {
+				sensorSelect = $myTask[viewIndex].sensorUse - 1;
+				minSpinner = 20;
+				maxSpinner = 100;
+			} else if ($myTask[viewIndex].sensorType === nodeType.NODE_CAPASITIVESOIL_SENSOR) {
+				sensorSelect = $myTask[viewIndex].sensorUse - 1;
+				minSpinner = 20;
+				maxSpinner = 100;
+			} else if ($myTask[viewIndex].sensorType === nodeType.NODE_ULTRASONIC_SENSOR) {
+				sensorSelect = $myTask[viewIndex].sensorUse - 1;
+				minSpinner = -15;
+				maxSpinner = 10;
+			}
+		} else if (mode === modalMode.SENSOR_DATA) {
+			$setupMode = modalMode.SENSOR_DATA;
+			setupTitle = 'Sensor ' + $sensorListTxt[$myTask[viewIndex].sensorType];
 		}
 	}
 
@@ -470,8 +482,8 @@
 					{
 						label: fieldName,
 						data: processedData.map((item) => item.value),
-						borderColor: 'rgb(255, 159, 64)', // Warna Garis (misal, Oranye)
-						backgroundColor: 'rgba(255, 159, 64, 0.2)', // Warna latar titik
+						borderColor: 'rgb(255, 20, 0)', // Warna Garis (misal, Oranye)
+						backgroundColor: 'rgba(255, 20, 0, 0.2)', // Warna latar titik
 						tension: 0.4,
 						fill: false
 					}
@@ -516,6 +528,7 @@
 						}
 						if (context.parsed.y !== null) {
 							label += new Intl.NumberFormat('id-ID').format(context.parsed.y);
+							label += ' cm';
 						}
 						return label;
 					}
@@ -537,14 +550,18 @@
 				reverse: false
 			},
 			y: {
-				title: { display: false, text: 'Ketinggan(cm)' },
+				title: { display: false, text: 'Ketinggan(cm)' }
 
-				min: -15,
-				max: 15,
-				ticks: { stepSize: 5, autoSkip: false }
+				//min: -15,
+				//max: 15,
+				//ticks: { stepSize: 5, autoSkip: false }
 			}
 		}
 	};
+
+	function downloadAll() {
+		window.location.href = `/thingspeak/download-all?channel=${CHANNEL_ID}&apiKey=${READ_API_KEY}`;
+	}
 </script>
 
 {#if $isLogin}
@@ -554,13 +571,15 @@
 				class={$myTask[viewIndex].enable === 0
 					? 'font-monospace mt-0 h-8 w-full  bg-red-500 text-center text-sm font-bold text-white '
 					: 'font-monospace mt-0 h-8 w-full  bg-green-500 text-center text-sm font-bold text-white '}
-				ondblclick={() => setupClick()}
+				ondblclick={() => setupClick(modalMode.SETUP_TASK)}
 			>
 				{$myTask[viewIndex].nama}
 			</button>
-			<div class="mb-0 text-4xl font-bold">
-				{$myTask[viewIndex].sensorVal} <span class="text-xl">{satuan}</span>
-			</div>
+			<button onclick={() => setupClick(modalMode.SENSOR_DATA)}>
+				<div class="mb-0 text-4xl font-bold">
+					{$myTask[viewIndex].sensorVal} <span class="text-xl">{satuan}</span>
+				</div>
+			</button>
 			<div class="mt-0 text-xs">
 				lastSeen
 				{#if $myTask[viewIndex].lastSeen === 0}
@@ -633,16 +652,17 @@
 				>
 			</div>
 		</div>
-		<button
-			class="mt-16"
-			onclick={() => {
-				$helpModal = true;
-			}}
-		>
-			<img class="h-8 w-8" src="/help.png" alt="Help" />
-		</button>
 	</div>
 {/if}
+
+<button
+	class="mt-16 w-full justify-items-center"
+	onclick={() => {
+		$helpModal = true;
+	}}
+>
+	<img class="h-8 w-8" src="/help.png" alt="Help" />
+</button>
 
 <!--
 <div>{$logMsg}</div>
@@ -650,10 +670,11 @@
 -->
 
 <Modal class="h-180 w-full py-0" title={setupTitle} bind:open={defaultModal}>
-	<Tabs tabStyle="underline">
-		<TabItem open title="Setup">
-			<div class="mx-auto grid max-w-sm grid-cols-2 gap-2">
-				<!--
+	{#if $setupMode === modalMode.SETUP_TASK}
+		<Tabs tabStyle="underline">
+			<TabItem open title="Setup">
+				<div class="mx-auto grid max-w-sm grid-cols-2 gap-2">
+					<!--
 				<div class="col-span-2">
 					<label for="pilihMode" class="mb-1 block text-xs dark:text-white">Pilih Mode</label>
 					<select
@@ -669,151 +690,161 @@
 				</div>
 			-->
 
-				<div class="col-span-2 mb-4">
-					<label for="NamaTask" class="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
-						>Nama</label
-					>
-					<input
-						type="text"
-						id="namatask"
-						bind:value={namaSelect}
-						class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-						placeholder={$myTask[viewIndex].nama}
-						required
+					<div class="col-span-2 mb-4">
+						<label
+							for="NamaTask"
+							class="mb-2 block text-sm font-medium text-gray-900 dark:text-white">Nama</label
+						>
+						<input
+							type="text"
+							id="namatask"
+							bind:value={namaSelect}
+							class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+							placeholder={$myTask[viewIndex].nama}
+							required
+						/>
+					</div>
+
+					<div class="mb-4">
+						<label for="small1" class="mb-1 block text-xs dark:text-white">Pilih Aktuator1</label>
+						<select
+							bind:value={aktuator1Select}
+							onchange={() => aktuatorSelect_click(1)}
+							id="small1"
+							class="mb-1 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+						>
+							{#each $myAktuator as aktuator, idx}
+								<option value={idx}>Aktuator({aktuator.nodeId}-{aktuator.nomerAktuator - 6})</option
+								>
+							{/each}
+						</select>
+					</div>
+					<div class="mb-4">
+						<label for="small2" class="mb-1 block text-xs">Pilih Aktuator2</label>
+						<select
+							bind:value={aktuator2Select}
+							onchange={() => aktuatorSelect_click(2)}
+							id="small2"
+							class="mb-1 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+						>
+							{#each $myAktuator as aktuator, idx}
+								<option value={idx}>Aktuator({aktuator.nodeId}-{aktuator.nomerAktuator - 6})</option
+								>
+							{/each}
+						</select>
+					</div>
+					<Label class="text-xs"
+						>Pilih Sensor
+						<Select bind:value={sensorSelect} onchange={() => sensorSelect_click()} class="text-sm">
+							{#each $mySensor as sensor, idx}
+								<option value={idx}
+									>Sensor {$sensorListTxt[sensor.sensorType]} {idx + 1} ({sensor.nodeId})
+								</option>
+							{/each}
+						</Select>
+					</Label>
+
+					<Label class="text-xs"
+						>Sensor Interval {intervalSelected} Menit
+						<RangeSlider min={5} max={90} bind:value={intervalSelected} />
+					</Label>
+				</div>
+
+				<div class="my-0"></div>
+				<div class="m-4 mt-4 rounded-sm border border-gray-200 dark:border-gray-700">
+					<div class="mt-2 grid grid-cols-2 justify-items-center">
+						{#if $myTask[viewIndex].sensorType === nodeType.NODE_HUMIDITY}
+							<div>OFF({rangeValue[0]})</div>
+							<div>ON({rangeValue[1]})</div>
+						{:else}
+							<div>ON({rangeValue[0]})</div>
+							<div>OFF({rangeValue[1]})</div>
+						{/if}
+					</div>
+
+					<RangeSlider
+						range
+						pips
+						min={minSpinner}
+						max={maxSpinner}
+						onchange={() => rangeChange()}
+						bind:values={rangeValue}
 					/>
 				</div>
 
-				<div class="mb-4">
-					<label for="small1" class="mb-1 block text-xs dark:text-white">Pilih Aktuator1</label>
-					<select
-						bind:value={aktuator1Select}
-						onchange={() => aktuatorSelect_click(1)}
-						id="small1"
-						class="mb-1 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-					>
-						{#each $myAktuator as aktuator, idx}
-							<option value={idx}>Aktuator({aktuator.nodeId}-{aktuator.nomerAktuator - 6})</option>
-						{/each}
-					</select>
+				<div class="grid h-10 w-3/4 grid-cols-3 gap-4 pl-4">
+					<Button color="red" onclick={() => (defaultModal = false)}>Keluar</Button>
+					<Button color="green" onclick={() => simpanTask()}>Simpan</Button>
 				</div>
-				<div class="mb-4">
-					<label for="small2" class="mb-1 block text-xs">Pilih Aktuator2</label>
-					<select
-						bind:value={aktuator2Select}
-						onchange={() => aktuatorSelect_click(2)}
-						id="small2"
-						class="mb-1 block w-full rounded-lg border border-gray-300 bg-gray-50 p-2 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-					>
-						{#each $myAktuator as aktuator, idx}
-							<option value={idx}>Aktuator({aktuator.nodeId}-{aktuator.nomerAktuator - 6})</option>
-						{/each}
-					</select>
-				</div>
-				<Label class="text-xs"
-					>Pilih Sensor
-					<Select bind:value={sensorSelect} onchange={() => sensorSelect_click()} class="text-sm">
-						{#each $mySensor as sensor, idx}
-							<option value={idx}
-								>Sensor {$sensorListTxt[sensor.sensorType]} {idx + 1} ({sensor.nodeId})
-							</option>
-						{/each}
-					</Select>
-				</Label>
-
-				<Label class="text-xs"
-					>Sensor Interval {intervalSelected} Menit
-					<RangeSlider min={5} max={90} bind:value={intervalSelected} />
-				</Label>
-			</div>
-
-			<div class="my-0"></div>
-			<div class="m-4 mt-4 rounded-sm border border-gray-200 dark:border-gray-700">
-				<div class="mt-2 grid grid-cols-2 justify-items-center">
-					{#if $myTask[viewIndex].sensorType === nodeType.NODE_HUMIDITY}
-						<div>OFF({rangeValue[0]})</div>
-						<div>ON({rangeValue[1]})</div>
-					{:else}
-						<div>ON({rangeValue[0]})</div>
-						<div>OFF({rangeValue[1]})</div>
-					{/if}
-				</div>
-
-				<RangeSlider
-					range
-					pips
-					min={minSpinner}
-					max={maxSpinner}
-					onchange={() => rangeChange()}
-					bind:values={rangeValue}
-				/>
-			</div>
-
-			<div class="grid h-10 w-3/4 grid-cols-3 gap-4 pl-4">
-				<Button color="red" onclick={() => (defaultModal = false)}>Keluar</Button>
-				<Button color="green" onclick={() => simpanTask()}>Simpan</Button>
-			</div>
-		</TabItem>
-		<TabItem title="Aktuator">
-			<div class="h-full w-full overflow-auto">
-				{#each $myAktuator as aktuator, idx}
-					<div class="mb-4 grid h-16 w-full grid-cols-3 rounded border p-2">
-						<button class="textsm col-span-2 ml-2 text-left font-bold"
-							>Aktuator{idx + 1}
-							<div class="text-xs font-normal">
-								NodeId: {aktuator.nodeId} Aktuator: {aktuator.nomerAktuator - 6}
-							</div></button
-						>
-						<button class="text-sm font-bold"
-							>{#if aktuator.val === 1}
-								ON
-							{:else}
-								OFF
-							{/if}</button
-						>
-					</div>
-				{/each}
-			</div>
-		</TabItem>
-		<TabItem title="Sensor">
-			<div class="no-scrollbar h-full w-full overflow-auto">
-				{#each $mySensor as sensor, idx}
-					{#if sensor.sensorType != nodeType.NODE_TEMPERATURE && sensor.sensorType != nodeType.NODE_HUMIDITY}
-						<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
-							<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
-								><div class="ml-2 mt-2 font-bold">
-									Sensor {$sensorListTxt[sensor.sensorType]}
-								</div>
-								<div class="ml-2 text-xs font-normal">
-									NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
+			</TabItem>
+			<TabItem titl="Aktuator">
+				<div class="h-full w-full overflow-auto">
+					{#each $myAktuator as aktuator, idx}
+						<div class="mb-4 grid h-16 w-full grid-cols-3 rounded border p-2">
+							<button class="textsm col-span-2 ml-2 text-left font-bold"
+								>Aktuator{idx + 1}
+								<div class="text-xs font-normal">
+									NodeId: {aktuator.nodeId} Aktuator: {aktuator.nomerAktuator - 6}
 								</div></button
 							>
-							<button class="bg-gray-200 text-center font-bold">{sensor.val} {satuan}</button>
-
-							<div class="ml-2 mt-2 text-xs">Snr:{sensor.snr}</div>
-							<div class="mt-2 text-xs">Rssi:{sensor.rssi}</div>
-							<div class="mt-2 text-xs">val:{sensor.rawVal}</div>
-
-							<div class="col-span-3 my-2 ml-2 text-xs">
-								lastSeen:{unixToLocalString(sensor.lastSeen)}
-							</div>
+							<button class="text-sm font-bold"
+								>{#if aktuator.val === 1}
+									ON
+								{:else}
+									OFF
+								{/if}</button
+							>
 						</div>
-					{/if}
-				{/each}
-				<hr class="mb-4" />
-			</div>
-		</TabItem>
-		<TabItem title="History">
-			<div class="grid grid-cols-2">
-				<button onclick={() => refreshHistoryClick()}
-					><RefreshOutline class="h-6 w-6 shrink-0" /></button
-				>
-			</div>
+					{/each}
+				</div>
+			</TabItem>
+			<TabItem title="Sensor">
+				<div class="no-scrollbar h-full w-full overflow-auto">
+					{#each $mySensor as sensor, idx}
+						{#if sensor.sensorType != nodeType.NODE_TEMPERATURE && sensor.sensorType != nodeType.NODE_HUMIDITY}
+							<div class="mb-4 grid h-32 w-full grid-cols-3 content-start rounded border">
+								<button class="col-span-2 h-14 rounded bg-gray-200 text-left text-sm font-bold"
+									><div class="ml-2 mt-2 font-bold">
+										Sensor {$sensorListTxt[sensor.sensorType]}
+									</div>
+									<div class="ml-2 text-xs font-normal">
+										NodeId: {sensor.nodeId} Batt:{sensor.battLevel}%
+									</div></button
+								>
+								<button class="bg-gray-200 text-center font-bold">{sensor.val} {satuan}</button>
 
-			{#if chartData}
-				<ChartComponent type="line" data={chartData} {options} />
-			{/if}
-		</TabItem>
-	</Tabs>
+								<div class="ml-2 mt-2 text-xs">Snr:{sensor.snr}</div>
+								<div class="mt-2 text-xs">Rssi:{sensor.rssi}</div>
+								<div class="mt-2 text-xs">val:{sensor.rawVal}</div>
+
+								<div class="col-span-3 my-2 ml-2 text-xs">
+									lastSeen:{unixToLocalString(sensor.lastSeen)}
+								</div>
+							</div>
+						{/if}
+					{/each}
+					<hr class="mb-4" />
+				</div>
+			</TabItem>
+			<TabItem title="History"></TabItem>
+		</Tabs>
+	{:else if $setupMode === modalMode.SENSOR_DATA}
+		<div class="grid grid-cols-2 h-8">
+			<button class="center w-full" onclick={() => refreshHistoryClick()}
+				><RefreshOutline class="ml-16 h-6 w-6 shrink-0" />
+				<div>Refresh</div></button
+			>
+			<button onclick={() => downloadAll()} class="rounded bg-blue-600 px-4 py-2 text-white">
+				<DownloadSolid class="h-6 w-6" /> Download
+			</button>
+		</div>
+
+		{#if chartData}
+			<ChartComponent type="line" data={chartData} {options} />
+		{/if}
+	{:else if $setupMode === modalMode.ALERT}
+		<div>Alert</div>
+	{/if}
 </Modal>
 
 <!--Setiing modal-->
@@ -947,7 +978,7 @@
 					</List>
 				</div>
 			</div>
-			<hr class="my-4"/>
+			<hr class="my-4" />
 			<div class="grid grid-cols-2 gap-4">
 				<Img src="/task.jpg" alt="login Image" class="w-full" />
 				<div>
@@ -955,14 +986,19 @@
 						>Halaman Fungsi</Heading
 					>
 					<List tag="ol" class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
-						<Li>Nama Fungsi,click 2 x untuk menu Setup,Ini akan berwarna Hijau jika Fungsi berjalan otomatis dengan sensor dan berwarna merah jika otomatis nya tidak aktif</Li>
+						<Li
+							>Nama Fungsi,click 2 x untuk menu Setup,Ini akan berwarna Hijau jika Fungsi berjalan
+							otomatis dengan sensor dan berwarna merah jika otomatis nya tidak aktif</Li
+						>
+						<Li>Click pada nilai Sensor,untuk membaca data sensor</Li>
+
 						<Li>Button untuk menyalakan/Mematikan Pompa</Li>
-						<Li>Pilihan untuk menyalakan Pompa secara otomatis Berdasar sensor </Li>
+						<Li>Pilihan untuk menyalakan Pompa secara otomatis Berdasar sensor</Li>
 						<Li>Infoprmasi Pompa ON dan OFF berdasar sensor</Li>
 					</List>
 				</div>
 			</div>
-			<hr class="my-4"/>
+			<hr class="my-4" />
 
 			<div class="grid grid-cols-2 gap-4">
 				<Img src="/setup.jpg" alt="login Image" class="w-full" />
@@ -971,65 +1007,41 @@
 						>Halaman Setup</Heading
 					>
 					<List tag="ol" class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
-						<Li>Plihan unutk melihat status Setup,Aktuator,Sensor,History </Li>
-						<Li>Untuk mengganti nama </Li>
+						<Li>Plihan unutk melihat status Setup,Aktuator,Sensor,History</Li>
+						<Li>Untuk mengganti nama</Li>
 						<Li>Untuk pilih Pompa/Aktuator,ada 2 aktuator yang bisa dipakai</Li>
 						<Li>Pilih sensor</Li>
-						<Li>Waktu Interval Sensor yang dipilih unutk kirim data</Li> 
+						<Li>Waktu Interval Sensor yang dipilih unutk kirim data</Li>
 						<Li>Tentukan Waktu ON dan OFF Pompa/Aktuator ,jika fungsi diset otomatis</Li>
 						<Li>Simpan Perubahan</Li>
 					</List>
 				</div>
 			</div>
 
-			<hr class="my-4"/>
+			<hr class="my-4" />
 
 			<div class="grid grid-cols-2 gap-4">
 				<Img src="/history1.jpg" alt="login Image" class="w-full" />
 				<div>
 					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
-						>Halaman History sensor</Heading
+						>History sensor</Heading
 					>
 					<List tag="ol" class="space-y-1 text-xs text-gray-500 dark:text-gray-400">
-						<Li>Pada halaman Setup ,pilih History, akan muncul halaman in</Li>
-						<Li>Pilih refresh data, maka data grafik dari sensor akan muncul(menampilkan 100 log history)</Li>
+						<Li>Click pada nilai sensor ,akan muncul halaman ini</Li>
+						<Li
+							>Pilih refresh data, maka data grafik dari sensor akan muncul(menampilkan 100 log
+							history)</Li
+						>
+						<Li>Click download unutk meyalindata dalam format csv</Li>
 						<Li>Data Sensor</Li>
 					</List>
 				</div>
 				<Img src="/history2.jpg" alt="login Image" class="w-full" />
 			</div>
-
-
 		</AccordionItem>
 		<AccordionItem>
 			{#snippet header()}Pemasangan Kontrol/Sensor{/snippet}
-			<p class="mb-2 text-gray-500 dark:text-gray-400">
-				Lorem ipsum dolor sit amet, consectetur adipisicing elit. Illo ab necessitatibus sint
-				explicabo ...
-			</p>
-			<p class="mb-2 text-gray-500 dark:text-gray-400">
-				Lorem ipsum dolor sit amet, consectetur adipisicing elit. Illo ab necessitatibus sint
-				explicabo ...
-			</p>
-			<p class="mb-2 text-gray-500 dark:text-gray-400">Learn more about these technologies:</p>
-			<ul class="list-disc ps-5 text-gray-500 dark:text-gray-400">
-				<li>
-					<a
-						href="/"
-						target="_blank"
-						rel="noreferrer"
-						class="text-blue-600 hover:underline dark:text-blue-500">Lorem ipsum</a
-					>
-				</li>
-				<li>
-					<a
-						href="https://tailwindui.com/"
-						rel="noreferrer"
-						target="_blank"
-						class="text-blue-600 hover:underline dark:text-blue-500">Tailwind UI</a
-					>
-				</li>
-			</ul>
+			<div></div>
 		</AccordionItem>
 	</Accordion>
 </Modal>
