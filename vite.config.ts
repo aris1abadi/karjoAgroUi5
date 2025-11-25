@@ -71,7 +71,5 @@ export default defineConfig({
         }
         // --- KONFIGURASI PROXY SELESAI DI SINI ---
 	},
-	build: {
-        target: 'es2015',  // paling aman untuk Android lama
-    }
+	
 });
