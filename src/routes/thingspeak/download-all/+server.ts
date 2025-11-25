@@ -43,7 +43,7 @@ export async function GET({ url }) {
     return new Response(csv, {
         headers: {
             "Content-Type": "text/csv",
-            "Content-Disposition": `attachment; filename="thingspeak-${channelId}-all.csv"`
+            "Content-Disposition": `attachment; filename="karjoAgro-sensor.csv"`
         }
     });
 }

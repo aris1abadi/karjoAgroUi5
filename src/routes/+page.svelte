@@ -67,12 +67,6 @@
 	let swiperEl = $state();
 	let swiper;
 
-	const pages = [
-		{ title: 'Login', text: 'Ringkasan ...', img: '/btoff.png' },
-		{ title: 'Pengaturan', text: 'Pengaturan ...', img: '/cloud.jpeg' },
-		{ title: 'Monitoring', text: 'Monitoring ...', img: '/endpin2.png' },
-		{ title: 'Kontrol', text: 'Kontrol ...', img: '/home.png' }
-	];
 
 	// --- STATE REAKTIF SVELTE ---
 	let rawChartData = $state(null);
@@ -661,7 +655,7 @@
 		$helpModal = true;
 	}}
 >
-	<img class="h-8 w-8" src="/help.png" alt="Help" />
+	<img class="h-8 w-8" src="help.png" alt="Help" />
 </button>
 
 <!--
@@ -964,7 +958,7 @@
 		<AccordionItem>
 			{#snippet header()}Penggunaan Aplikasi{/snippet}
 			<div class="grid grid-cols-2 gap-4">
-				<Img src="/login.jpg" alt="login Image" class="w-full" />
+				<Img src="login.jpg" alt="login Image" class="w-full" />
 				<div>
 					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
 						>Halaman Login</Heading
@@ -980,7 +974,7 @@
 			</div>
 			<hr class="my-4" />
 			<div class="grid grid-cols-2 gap-4">
-				<Img src="/task.jpg" alt="login Image" class="w-full" />
+				<Img src="task.jpg" alt="login Image" class="w-full" />
 				<div>
 					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
 						>Halaman Fungsi</Heading
@@ -1001,7 +995,7 @@
 			<hr class="my-4" />
 
 			<div class="grid grid-cols-2 gap-4">
-				<Img src="/setup.jpg" alt="login Image" class="w-full" />
+				<Img src="setup.jpg" alt="login Image" class="w-full" />
 				<div>
 					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
 						>Halaman Setup</Heading
@@ -1021,7 +1015,7 @@
 			<hr class="my-4" />
 
 			<div class="grid grid-cols-2 gap-4">
-				<Img src="/history1.jpg" alt="login Image" class="w-full" />
+				<Img src="history1.jpg" alt="login Image" class="w-full" />
 				<div>
 					<Heading tag="h2" class="mb-2 text-lg font-semibold  text-gray-900 dark:text-white"
 						>History sensor</Heading
@@ -1036,7 +1030,7 @@
 						<Li>Data Sensor</Li>
 					</List>
 				</div>
-				<Img src="/history2.jpg" alt="login Image" class="w-full" />
+				<Img src="history2.jpg" alt="login Image" class="w-full" />
 			</div>
 		</AccordionItem>
 		<AccordionItem>
